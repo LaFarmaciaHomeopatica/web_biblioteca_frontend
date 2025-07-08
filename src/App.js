@@ -1,7 +1,7 @@
 // src/App.jsx
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Login from './components/Login';
+import { BrowserRouter, Routes, Route, createBrowserRouter } from 'react-router-dom';
+import Login from './components/login';
 
 const App = () => {
   return (
@@ -11,6 +11,7 @@ const App = () => {
       </Routes>
     </BrowserRouter>
   );
+  
 };
 
 export default App;
