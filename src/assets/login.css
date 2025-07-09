@@ -6,8 +6,6 @@
   padding: 0;
   box-sizing: border-box;
   font-family: "Poppins", sans-serif;
-  text-decoration: none;
-  list-style: none;
 }
 
 body {
@@ -15,251 +13,142 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(90deg, #ffffff, #8ec0f8);
+  background: linear-gradient(90deg, #ffffff, #82bcff);
 }
 
 /* Contenedor principal */
 .container {
   position: relative;
-  width: 850px;
-  height: 550px;
-  margin: 20px;
-  background: #fff;
+  width: 500px;
+  height: 350px;
+  background: #f7f7f7;
   border-radius: 30px;
-  box-shadow: 0 0 30px rgba(0, 0, 0, .2);
+  box-shadow: 0 0 30px rgba(77, 175, 255, 0.5);
+  display: flex;
   overflow: hidden;
 }
 
-/* Textos */
-.container h1 {
-  font-size: 36px;
-  margin-block: -10px;
-}
-
-.container p {
-  font-size: 14.5px;
-  margin-block: 15px;
-}
-
-/* Formularios */
-form {
-  width: 100%;
-}
-
-.form-box {
-  position: absolute;
-  right: 0;
+/* CAMBIO 1: Imagen ajustada completamente a la izquierda */
+.toggle-box {
   width: 50%;
   height: 100%;
+  overflow: hidden;
+  border-radius: 30px 0 0 30px;
+  margin-left: -15px; /* Elimina el espacio izquierdo */
+}
+
+.imagen-fondo {
+  width: calc(100% + 15px); /* Compensa el margen negativo */
+  height: 100%;
+  object-fit: cover;
+  object-position: left center;
+}
+
+/* Formulario */
+.form-box {
+  width: 50%;
   padding: 40px;
-  background: #fff;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.form-box h2 {
+  font-size: 24px;
   color: #333;
+  margin-bottom: 25px;
   text-align: center;
-  z-index: 1;
-  transition: all 0.6s ease-in-out 1.2s;
-}
-
-.container.active .form-box {
-  right: 50%;
-}
-
-.form-box.register {
-  visibility: hidden;
-}
-
-.container.active .form-box.register {
-  visibility: visible;
 }
 
 /* Inputs */
 .input-box {
   position: relative;
-  margin: 30px 0;
+  margin-bottom: 20px;
 }
 
 .input-box input {
   width: 100%;
-  padding: 13px 50px 13px 20px;
-  background: #eee;
+  padding: 12px 15px;
+  background: #f5f5f5;
   border: none;
-  outline: none;
   border-radius: 8px;
-  font: 500 16px "Poppins", sans-serif;
+  font-size: 14px;
   color: #333;
+  outline: none;
 }
 
 .input-box input::placeholder {
   color: #888;
-  font-weight: 400;
 }
 
-.input-box i {
-  position: absolute;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 20px;
-}
-
-/* Enlaces y botones */
-.forgot-link {
-  margin-block: -15px 15px;
-  
-}
-
-.forgot-link a {
-  font-size: 14.5px;
-  color: #333;
-}
-
+/* CAMBIO 2: Botón con azul sólido */
 .btn {
   width: 100%;
-  height: 48px;
+  padding: 12px;
   border: none;
   border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, .1);
-  font: 600 16px "Poppins", sans-serif;
-  color: #fff;
-  background: #7494ec;
+  background: #0857b3; /* Color azul del gradiente */
+  color: white; /* Texto en blanco */
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.3s;
 }
 
-/* Iconos sociales */
-.social-icons {
-  display: flex;
-  justify-content: center;
+.btn:hover {
+  background: #82bcff !important; /* Azul sólido en todo el botón */
+  color: white !important; /* Texto blanco */
+  transform: translateY(-2px);
+  box-shadow: none !important; /* Eliminamos la sombra si no la deseas */
+  border: none !important;
 }
 
-.social-icons a {
-  display: inline-flex;
-  padding: 10px;
-  border: 2px solid #ccc;
-  border-radius: 8px;
-  font-size: 24px;
-  color: #333;
-  margin: 0 8px;
-}
-
-/* Efectos de toggle */
-.toggle-box {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-}
-
-
-
-.container.active .toggle-box::before {
-  left: 50%;
-}
-
-.toggle-panel {
-  position: absolute;
-  width: 50%;
-  height: 100%;
-  color: #000000;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 2;
-  transition: all 0.6s ease-in-out;
-}
-
-.toggle-panel.toggle-left {
-  left: 0;
-  transition-delay: 1.2s;
-}
-
-.container.active .toggle-panel.toggle-left {
-  left: -50%;
-  transition-delay: 0.6s;
-}
-
-.toggle-panel.toggle-right {
-  right: -50%;
-  transition-delay: 0.6s;
-}
-
-.container.active .toggle-panel.toggle-right {
-  right: 0;
-  transition-delay: 1.2s;
-}
-
-.toggle-panel p {
-  margin-bottom: 20px;
-}
-
-.toggle-panel .btn {
-  width: 160px;
-  height: 46px;
-  background: transparent;
-  border: 2px solid #fff;
-  box-shadow: none;
+/* Mensaje de error */
+.error-message {
+  color: #ff4444;
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 13px;
 }
 
 /* Responsive */
-@media screen and (max-width: 650px) {
+@media (max-width: 768px) {
   .container {
-    height: calc(100vh - 40px);
+    flex-direction: column;
+    height: auto;
+    width: 90%;
+    max-width: 400px;
+  }
+
+  .toggle-box {
+    width: 100%;
+    height: 150px;
+    border-radius: 30px 30px 0 0;
+    margin-left: 0;
+  }
+
+  .imagen-fondo {
+    width: 100%;
   }
 
   .form-box {
-    bottom: 0;
     width: 100%;
-    height: 70%;
-  }
-
-  .container.active .form-box {
-    right: 0;
-    bottom: 30%;
-  }
-
-  .toggle-box::before {
-    left: 0;
-    top: -270%;
-    width: 100%;
-    height: 300%;
-    border-radius: 20vw;
-  }
-
-  .container.active .toggle-box::before {
-    left: 0;
-    top: 70%;
-  }
-
-  .container.active .toggle-panel.toggle-left {
-    left: 0;
-    top: -30%;
-  }
-
-  .toggle-panel {
-    width: 100%;
-    height: 30%;
-  }
-
-  .toggle-panel.toggle-left {
-    top: 0;
-  }
-
-  .toggle-panel.toggle-right {
-    right: 0;
-    bottom: -30%;
-  }
-
-  .container.active .toggle-panel.toggle-right {
-    bottom: 0;
+    padding: 30px;
   }
 }
 
-@media screen and (max-width: 400px) {
+@media (max-width: 480px) {
   .form-box {
-    padding: 20px;
+    padding: 25px 20px;
   }
-
-  .toggle-panel h1 {
-    font-size: 30px;
+  
+  .form-box h2 {
+    font-size: 22px;
+    margin-bottom: 20px;
+  }
+  
+  .btn {
+    padding: 10px;
   }
 }

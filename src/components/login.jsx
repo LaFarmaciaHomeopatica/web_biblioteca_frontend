@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import '../assets/login.css';
-import imagenFondo from '../assets/22102024.png';  // Import de imagen
+import { useNavigate } from 'react-router-dom'; // Asegúrate que esta línea esté presente
+import imagenFondo from '../assets/22102024.png'; // Import de imagen
 
 const Login = () => {
+  const navigate = useNavigate(); // Aquí inicializas navigate
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -12,16 +14,31 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
+     console.log('Intentando iniciar sesión con:', { email, password });
+
+
     try {
-      const response = await axios.post('http://localhost:8000/api/login', {
+      const response = await axios.post('http://127.0.0.1:8000/api/login', {
         email,
         password
       });
 
       localStorage.setItem('authToken', response.data.token);
       console.log('Login exitoso', response.data);
+
+      // Opcional: limpiar campos después del login exitoso
+      setEmail('');
+      setPassword('');
+
+      
+      navigate('/admin'); // Redirige al usuario al admin después del login exitoso
+
     } catch (err) {
-      setError('Credenciales incorrectas');
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Ocurrió un error inesperado.');
+      }
       console.error('Error en el login:', err);
     }
   };
