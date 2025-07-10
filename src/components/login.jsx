@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import '../assets/login.css';
 import { useNavigate } from 'react-router-dom'; // Asegúrate que esta línea esté presente
-import imagenFondo from '../assets/22102024.png'; // Import de imagen
+import imagenFondo from '../assets/23102024-DSC04075.png'; // Import de imagen
 
 const Login = () => {
   const navigate = useNavigate(); // Aquí inicializas navigate
@@ -55,7 +55,7 @@ const Login = () => {
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            borderRadius: '10px'
+            borderRadius: '1px'
           }}
         />
       </div>
