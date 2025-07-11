@@ -1,37 +1,43 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import '../assets/login.css';
-import { useNavigate } from 'react-router-dom'; // Asegúrate que esta línea esté presente
-import imagenFondo from '../assets/23102024-DSC04075.png'; // Import de imagen
+import { useNavigate } from 'react-router-dom';
+import imagenFondo from '../assets/23102024-DSC04075.png';
 
 const Login = () => {
-  const navigate = useNavigate(); // Aquí inicializas navigate
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  // Aquí defines la función redirigirPorRol
+  const redirigirPorRol = (rol) => {
+    if (rol === 'Administrador') {
+      navigate('/admin'); // ruta para admin
+    } else if (rol === 'Farmacéutico') {
+      navigate('/cliente');
+    } else if (rol === 'Vendedor') {
+      navigate('/cliente');
+    } else {
+      navigate('/');  // ruta genérica o error
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-     console.log('Intentando iniciar sesión con:', { email, password });
-
-
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/login', {
-        email,
-        password
-      });
+      const response = await axios.post('http://127.0.0.1:8000/api/login', { email, password });
 
       localStorage.setItem('authToken', response.data.token);
-      console.log('Login exitoso', response.data);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
 
-      // Opcional: limpiar campos después del login exitoso
       setEmail('');
       setPassword('');
 
-      
-      navigate('/admin'); // Redirige al usuario al admin después del login exitoso
+      // Rediriges según rol
+      redirigirPorRol(response.data.user.rol);
 
     } catch (err) {
       if (err.response && err.response.data && err.response.data.message) {

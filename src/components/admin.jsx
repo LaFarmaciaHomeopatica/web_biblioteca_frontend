@@ -3,6 +3,8 @@ import { Container, Navbar, Button, Row, Col } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/admin.css';
 import { useNavigate } from 'react-router-dom';
+import logo from '../assets/logo.jpeg';
+
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -16,6 +18,8 @@ const Admin = () => {
     navigate('/consulta');
   };
 
+  
+
   const handleUsuarios = () => {
     navigate('/usuarios');
   };
@@ -25,11 +29,16 @@ const Admin = () => {
       {/* Header */}
       <Navbar expand="lg" className="admin-header">
         <Container fluid>
-          <Navbar.Brand href="#" className="d-flex align-items-center">
-            <i className="bi bi-shield-lock me-2"></i>
-            Panel Administrativo - Farmacia Homeopática
-          </Navbar.Brand>
-
+        <Navbar.Brand className="d-flex align-items-center">
+      <img
+        src={logo}
+        alt="Logo de la empresa"
+        width="40"
+        height="40"
+        className="d-inline-block align-top me-2"
+      />
+      <span className="admin-title">Panel Administrativo - Farmacia Homeopática</span>
+    </Navbar.Brand>
           <Button onClick={handleLogout} className="logout-button">
             <i className="bi bi-box-arrow-right me-1"></i> Salir
           </Button>

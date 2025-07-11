@@ -37,6 +37,12 @@ body {
   margin-right: -50vw;
 }
 
+.consulta-title {
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
 .navbar-brand {
   font-weight: 600;
   font-size: 1.2rem;
@@ -44,19 +50,7 @@ body {
 }
 
 /* Botón de salir */
-.devolver-button {
-  background: transparent !important;
-  border: 2px solid rgb(235, 33, 33) !important;
-  border-radius: 8px !important;
-  color: rgb(255, 109, 109) !important;
-  font-weight: 500 !important;
-  transition: all 0.2s !important;
-}
 
-.retroceder-button:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  transform: translateY(-2px);
-}
 
 /* Contenido principal (centrado) */
 .consulta-content {
@@ -70,7 +64,7 @@ body {
 /* FOOTER - Full width */
 .consulta-footer {
   background: #333 !important;
-  padding: 1.5rem 0 !important;
+  padding: 0.5rem 0 !important;
   color: white !important;
   width: 100vw;
   position: relative;

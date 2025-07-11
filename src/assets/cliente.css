@@ -37,6 +37,12 @@ body {
   margin-right: -50vw;
 }
 
+.cliente-title {
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
 .navbar-brand {
   font-weight: 600;
   font-size: 1.2rem;
@@ -44,7 +50,7 @@ body {
 }
 
 /* Botón de salir */
-.devolver-button, .salir-button {
+.salir-button {
   background: transparent !important;
   border: 2px solid rgb(235, 33, 33) !important;
   border-radius: 8px !important;
@@ -53,7 +59,7 @@ body {
   transition: all 0.2s !important;
 }
 
-.devolver-button:hover, .salir-button:hover {
+.salir-button:hover {
   background: rgba(255, 255, 255, 0.1) !important;
   transform: translateY(-2px);
 }
@@ -70,7 +76,7 @@ body {
 /* FOOTER - Full width */
 .cliente-footer {
   background: #333 !important;
-  padding: 1.5rem 0 !important;
+  padding: 0.5rem 0 !important;
   color: white !important;
   width: 100vw;
   position: relative;

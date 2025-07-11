@@ -37,40 +37,16 @@ body {
   margin-right: -50vw;
 }
 
+.usuarios-title {
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
 .navbar-brand {
   font-weight: 600;
   font-size: 1.2rem;
   color: white !important;
-}
-
-/* Botones de navegación */
-.nav-button {
-  color: white !important;
-  margin: 0 0.5rem;
-  font-weight: 500;
-  transition: all 0.2s;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-}
-
-.nav-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-}
-
-/* Botón de salir */
-.devolver-button {
-  background: transparent !important;
-  border: 2px solid rgb(235, 33, 33) !important;
-  border-radius: 8px !important;
-  color: rgb(255, 109, 109) !important;
-  font-weight: 500 !important;
-  transition: all 0.2s !important;
-}
-
-.devolver-button:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  transform: translateY(-2px);
 }
 
 /* Contenido principal (centrado pero no full-width) */
@@ -102,7 +78,7 @@ body {
 /* FOOTER - Full width */
 .usuarios-footer {
   background: #333 !important;
-  padding: 1.5rem 0 !important;
+  padding: 0.5rem 0 !important;
   color: white !important;
   width: 100vw;
   position: relative;
@@ -116,6 +92,7 @@ body {
   color: #82bcff !important;
   margin-right: 0.5rem;
 }
+
 
 /* Botones generales */
 .btn {
