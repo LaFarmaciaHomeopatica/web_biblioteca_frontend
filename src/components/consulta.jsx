@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Navbar, Form, FormControl, Button, Row, Col, Card, Table, Modal } from 'react-bootstrap';
+import {
+    Container, Navbar, Form, FormControl, Button, Row, Col,
+    Card, Table, Modal
+} from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/consulta.css';
 import { useNavigate } from 'react-router-dom';
@@ -17,48 +20,79 @@ const Consulta = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
+    const [isNewProduct, setIsNewProduct] = useState(false);
 
     const handleLogout = () => {
         localStorage.removeItem('authToken');
         navigate('/admin');
     };
 
-    // Obtener productos del backend
     useEffect(() => {
+        const fetchProductos = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const response = await axios.get('http://localhost:8000/api/productos');
+                setProductos(response.data.data || response.data);
+            } catch (error) {
+                setError('Error al cargar los productos');
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchProductos();
     }, []);
 
-    const fetchProductos = async () => {
+    const handleEditClick = (producto) => {
+        setIsNewProduct(false);
+        setEditingProduct(producto);
+        setFormData({ ...producto });
+        setShowModal(true);
+    };
+
+    const handleCreateClick = () => {
+        setIsNewProduct(true);
+        setEditingProduct(null);
+        setFormData({
+            codigo: '',
+            nombre: '',
+            descripcion: '',
+            categoria: '',
+            dosificacion: '',
+            vencimiento: '',
+            registro: '',
+            indicaciones_contraindicaciones: '',
+            marca: '',
+            estado_registro: '',
+            estado_producto: ''
+        });
+        setShowModal(true);
+    };
+
+    const handleDeleteClick = async (id) => {
+        if (!window.confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
         setLoading(true);
         setError(null);
+        setSuccessMessage(null);
+
         try {
+            const token = localStorage.getItem('authToken');
+            await axios.delete(`http://localhost:8000/api/productos/${id}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json'
+                }
+            });
+            setSuccessMessage('Producto eliminado correctamente');
+            // Actualizar productos después de eliminar
             const response = await axios.get('http://localhost:8000/api/productos');
-            console.log('Datos recibidos del backend:', response.data);
             setProductos(response.data.data || response.data);
         } catch (error) {
-            console.error('Error al obtener productos:', error);
-            setError('Error al cargar los productos');
+            setError('Error al eliminar el producto');
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleEditClick = (producto) => {
-        setEditingProduct(producto);
-        setFormData({
-            codigo: producto.codigo,
-            nombre: producto.nombre,
-            descripcion: producto.descripcion,
-            categoria: producto.categoria,
-            dosificacion: producto.dosificacion,
-            vencimiento: producto.vencimiento,
-            registro: producto.registro,
-            indicaciones_contraidicaciones: producto.indicaciones_contraidicaciones,
-            marca: producto.marca,
-            estado_registro: producto.estado_registro,
-            estado_producto: producto.estado_producto
-        });
-        setShowModal(true);
     };
 
     const handleInputChange = (e) => {
@@ -73,67 +107,32 @@ const Consulta = () => {
         setLoading(true);
         setError(null);
         setSuccessMessage(null);
-        
+
         try {
             const token = localStorage.getItem('authToken');
-            
-            if (!editingProduct?.id) {
-                throw new Error('ID del producto no definido');
+            const headers = {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                Accept: 'application/json'
+            };
+
+            if (isNewProduct) {
+                await axios.post('http://localhost:8000/api/productos', formData, { headers });
+            } else {
+                await axios.put(`http://localhost:8000/api/productos/${editingProduct.id}`, formData, { headers });
             }
-
-            // Verificación de datos antes de enviar
-            console.log('Datos a enviar:', formData);
-            console.log('ID del producto:', editingProduct.id);
-
-            const response = await axios.put(
-                `http://localhost:8000/api/productos/${editingProduct.id}`,
-                formData,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
-                }
-            );
-
-            console.log('Respuesta del servidor:', response.data);
-
-            if (!response.data.success) {
-                throw new Error(response.data.message || 'Error al actualizar');
-            }
-
-            // Actualización optimista del estado local
-            setProductos(prev => prev.map(p => 
-                p.id === editingProduct.id ? { ...p, ...formData } : p
-            ));
 
             setShowModal(false);
-            setSuccessMessage('Producto actualizado correctamente');
-            
-            // Recarga los datos desde el servidor para garantizar consistencia
-            await fetchProductos();
-            
+            setSuccessMessage(isNewProduct ? 'Producto creado exitosamente' : 'Producto actualizado correctamente');
+
+            // Actualizar productos después de crear/editar
+            const response = await axios.get('http://localhost:8000/api/productos');
+            setProductos(response.data.data || response.data);
         } catch (error) {
-            console.error('Error completo:', {
-                error: error.message,
-                response: error.response?.data,
-                config: error.config
-            });
-            
-            let errorMessage = 'Error al actualizar el producto';
-            
-            if (error.response) {
-                if (error.response.status === 422) {
-                    const errors = error.response.data.errors;
-                    errorMessage = Object.values(errors).flat().join('\n');
-                } else if (error.response.data?.message) {
-                    errorMessage = error.response.data.message;
-                }
-            } else {
-                errorMessage = error.message;
+            let errorMessage = isNewProduct ? 'Error al crear el producto' : 'Error al actualizar el producto';
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
             }
-            
             setError(errorMessage);
         } finally {
             setLoading(false);
@@ -146,26 +145,18 @@ const Consulta = () => {
 
     return (
         <div className="consulta-layout">
-            {/* Header */}
             <Navbar expand="lg" className="admin-header">
                 <Container fluid>
                     <Navbar.Brand className="d-flex align-items-center">
-                        <img
-                            src={logo}
-                            alt="Logo de la empresa"
-                            width="40"
-                            height="40"
-                            className="d-inline-block align-top me-2"
-                        />
+                        <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
                         <span className="consulta-title">Panel Administrativo - Farmacia Homeopática</span>
                     </Navbar.Brand>
                     <Button onClick={handleLogout} className="logout-button">
-                        <i className="bi bi-box-arrow-right me-1"></i> volver
+                        <i className="bi bi-box-arrow-right me-1"></i> Volver
                     </Button>
                 </Container>
             </Navbar>
 
-            {/* Contenido Principal */}
             <Container fluid className="consulta-content">
                 <Row className="mt-4">
                     <Col>
@@ -173,19 +164,20 @@ const Consulta = () => {
                             <Card.Body>
                                 <h4 className="mb-4">Consulta de Productos</h4>
 
-                                {/* Barra de búsqueda y filtros */}
+                                <Button className="mb-3" onClick={handleCreateClick} disabled={loading}>
+                                    + Crear Producto
+                                </Button>
+
                                 <div className="search-container mb-4">
                                     <Form className="d-flex">
                                         <FormControl
                                             type="text"
                                             placeholder={`Buscar por ${filterBy}...`}
-                                            className="mr-2"
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                         />
-                                        <Form.Control
-                                            as="select"
-                                            className="ml-2"
+                                        <Form.Select
+                                            className="ms-2"
                                             value={filterBy}
                                             onChange={(e) => setFilterBy(e.target.value)}
                                         >
@@ -195,28 +187,19 @@ const Consulta = () => {
                                             <option value="categoria">Categoría</option>
                                             <option value="marca">Marca</option>
                                             <option value="dosificacion">Dosificación</option>
-                                            <option value="indicaciones_contraidicaciones">Indicaciones/Contraindicaciones</option>
+                                            <option value="indicaciones_contraindicaciones">Indicaciones/Contraindicaciones</option>
                                             <option value="vencimiento">Fecha Vencimiento</option>
                                             <option value="registro">Registro Sanitario</option>
                                             <option value="estado_registro">Estado del Registro</option>
                                             <option value="estado_producto">Estado del Producto</option>
-                                        </Form.Control>
+                                        </Form.Select>
                                     </Form>
                                 </div>
 
                                 {loading && <div className="text-center mb-3">Cargando...</div>}
-                                {error && (
-                                    <div className="alert alert-danger" onClose={() => setError(null)} dismissible>
-                                        {error}
-                                    </div>
-                                )}
-                                {successMessage && (
-                                    <div className="alert alert-success" onClose={() => setSuccessMessage(null)} dismissible>
-                                        {successMessage}
-                                    </div>
-                                )}
+                                {error && <div className="alert alert-danger">{error}</div>}
+                                {successMessage && <div className="alert alert-success">{successMessage}</div>}
 
-                                {/* Tabla de productos */}
                                 <Table striped bordered hover responsive className="product-table">
                                     <thead>
                                         <tr>
@@ -244,18 +227,16 @@ const Consulta = () => {
                                                 <td>{producto.dosificacion}</td>
                                                 <td>{producto.vencimiento}</td>
                                                 <td>{producto.registro}</td>
-                                                <td>{producto.indicaciones_contraidicaciones}</td>
+                                                <td>{producto.indicaciones_contraindicaciones}</td>
                                                 <td>{producto.marca}</td>
                                                 <td>{producto.estado_registro}</td>
                                                 <td>{producto.estado_producto}</td>
                                                 <td>
-                                                    <Button 
-                                                        variant="primary" 
-                                                        size="sm" 
-                                                        onClick={() => handleEditClick(producto)}
-                                                        disabled={loading}
-                                                    >
+                                                    <Button variant="primary" size="sm" onClick={() => handleEditClick(producto)} disabled={loading}>
                                                         Editar
+                                                    </Button>{' '}
+                                                    <Button variant="danger" size="sm" onClick={() => handleDeleteClick(producto.id)} disabled={loading}>
+                                                        Eliminar
                                                     </Button>
                                                 </td>
                                             </tr>
@@ -268,178 +249,95 @@ const Consulta = () => {
                 </Row>
             </Container>
 
-            {/* Modal de Edición */}
+            {/* Modal Crear / Editar */}
             <Modal show={showModal} onHide={() => !loading && setShowModal(false)} size="lg">
                 <Modal.Header closeButton>
-                    <Modal.Title>Editar Producto: {editingProduct?.nombre}</Modal.Title>
+                    <Modal.Title>{isNewProduct ? 'Crear Producto' : `Editar Producto: ${editingProduct?.nombre}`}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {editingProduct && (
-                        <Form>
-                            <Row>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Código</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            name="codigo"
-                                            value={formData.codigo || ''}
-                                            onChange={handleInputChange}
-                                            disabled={loading}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Nombre</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            name="nombre"
-                                            value={formData.nombre || ''}
-                                            onChange={handleInputChange}
-                                            disabled={loading}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                            </Row>
+                    <Form>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Código</Form.Label>
+                                    <Form.Control type="text" name="codigo" value={formData.codigo || ''} onChange={handleInputChange} disabled={loading} />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Nombre</Form.Label>
+                                    <Form.Control type="text" name="nombre" value={formData.nombre || ''} onChange={handleInputChange} disabled={loading} />
+                                </Form.Group>
+                            </Col>
+                        </Row>
 
-                            <Form.Group className="mb-3">
-                                <Form.Label>Descripción</Form.Label>
-                                <Form.Control
-                                    as="textarea"
-                                    rows={2}
-                                    name="descripcion"
-                                    value={formData.descripcion || ''}
-                                    onChange={handleInputChange}
-                                    disabled={loading}
-                                />
-                            </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Descripción</Form.Label>
+                            <Form.Control as="textarea" name="descripcion" rows={2} value={formData.descripcion || ''} onChange={handleInputChange} disabled={loading} />
+                        </Form.Group>
 
-                            <Row>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Categoría</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            name="categoria"
-                                            value={formData.categoria || ''}
-                                            onChange={handleInputChange}
-                                            disabled={loading}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Marca</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            name="marca"
-                                            value={formData.marca || ''}
-                                            onChange={handleInputChange}
-                                            disabled={loading}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                            </Row>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Categoría</Form.Label>
+                                    <Form.Control type="text" name="categoria" value={formData.categoria || ''} onChange={handleInputChange} disabled={loading} />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Marca</Form.Label>
+                                    <Form.Control type="text" name="marca" value={formData.marca || ''} onChange={handleInputChange} disabled={loading} />
+                                </Form.Group>
+                            </Col>
+                        </Row>
 
-                            <Row>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Dosificación</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            name="dosificacion"
-                                            value={formData.dosificacion || ''}
-                                            onChange={handleInputChange}
-                                            disabled={loading}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Vencimiento</Form.Label>
-                                        <Form.Control
-                                            type="date"
-                                            name="vencimiento"
-                                            value={formData.vencimiento || ''}
-                                            onChange={handleInputChange}
-                                            disabled={loading}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                            </Row>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Dosificación</Form.Label>
+                                    <Form.Control type="text" name="dosificacion" value={formData.dosificacion || ''} onChange={handleInputChange} disabled={loading} />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Vencimiento</Form.Label>
+                                    <Form.Control type="date" name="vencimiento" value={formData.vencimiento || ''} onChange={handleInputChange} disabled={loading} />
+                                </Form.Group>
+                            </Col>
+                        </Row>
 
-                            <Row>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Registro Sanitario</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            name="registro"
-                                            value={formData.registro || ''}
-                                            onChange={handleInputChange}
-                                            disabled={loading}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Estado del Registro</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            name="estado_registro"
-                                            value={formData.estado_registro || ''}
-                                            onChange={handleInputChange}
-                                            disabled={loading}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                            </Row>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Registro</Form.Label>
+                                    <Form.Control type="text" name="registro" value={formData.registro || ''} onChange={handleInputChange} disabled={loading} />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Estado Registro</Form.Label>
+                                    <Form.Control type="text" name="estado_registro" value={formData.estado_registro || ''} onChange={handleInputChange} disabled={loading} />
+                                </Form.Group>
+                            </Col>
+                        </Row>
 
-                            <Form.Group className="mb-3">
-                                <Form.Label>Indicaciones/Contraindicaciones</Form.Label>
-                                <Form.Control
-                                    as="textarea"
-                                    rows={3}
-                                    name="indicaciones_contraidicaciones"
-                                    value={formData.indicaciones_contraidicaciones || ''}
-                                    onChange={handleInputChange}
-                                    disabled={loading}
-                                />
-                            </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Indicaciones/Contraindicaciones</Form.Label>
+                            <Form.Control as="textarea" name="indicaciones_contraindicaciones" rows={3} value={formData.indicaciones_contraindicaciones || ''} onChange={handleInputChange} disabled={loading} />
+                        </Form.Group>
 
-                            <Form.Group className="mb-3">
-                                <Form.Label>Estado del Producto</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    name="estado_producto"
-                                    value={formData.estado_producto || ''}
-                                    onChange={handleInputChange}
-                                    disabled={loading}
-                                />
-                            </Form.Group>
-                        </Form>
-                    )}
+                        <Form.Group className="mb-3">
+                            <Form.Label>Estado Producto</Form.Label>
+                            <Form.Control type="text" name="estado_producto" value={formData.estado_producto || ''} onChange={handleInputChange} disabled={loading} />
+                        </Form.Group>
+                    </Form>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button 
-                        variant="secondary" 
-                        onClick={() => setShowModal(false)}
-                        disabled={loading}
-                    >
-                        Cancelar
-                    </Button>
-                    <Button 
-                        variant="primary" 
-                        onClick={handleSaveChanges}
-                        disabled={loading}
-                    >
-                        {loading ? 'Guardando...' : 'Guardar Cambios'}
-                    </Button>
+                    <Button variant="secondary" onClick={() => setShowModal(false)} disabled={loading}>Cancelar</Button>
+                    <Button variant="primary" onClick={handleSaveChanges} disabled={loading}>{loading ? 'Guardando...' : 'Guardar'}</Button>
                 </Modal.Footer>
             </Modal>
 
-            {/* Footer */}
             <footer className="consulta-footer">
                 <Container fluid>
                     <Row className="py-3">
