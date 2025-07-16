@@ -6,6 +6,9 @@ import Admin from './components/admin.jsx';
 import Usuarios from './components/usuarios.jsx';
 import Consulta from './components/consulta.jsx';
 import Cliente from './components/cliente.jsx';
+import Documentos from './components/documentos.jsx'; 
+import Clientedoc from './components/clientedoc.jsx'; 
+import Vademecum from './components/vademecum.jsx'; 
 
 const App = () => {
   return (
@@ -16,6 +19,9 @@ const App = () => {
         <Route path="/usuarios" element={<Usuarios />} /> 
         <Route path="/consulta" element={<Consulta />} />
         <Route path="/cliente" element={<Cliente />} />
+        <Route path="/documentos" element={<Documentos />} />
+        <Route path="/clientedoc" element={<Clientedoc />} />
+        <Route path="/vademecum" element={<Vademecum />} />
       </Routes>
     </BrowserRouter>
   );

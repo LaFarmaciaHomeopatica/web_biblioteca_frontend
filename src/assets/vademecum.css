@@ -1,0 +1,93 @@
+/* Contenedor principal */
+.cliente-layout {
+    background: linear-gradient(90deg, #ffffff, #82bcff);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-header {
+    background: #0857b3 !important;
+    padding: 1rem 0;
+}
+
+.admin-title {
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.logout-button {
+    background-color: #db6974 !important;
+    color: #fff !important;
+    border: none;
+    border-radius: 8px;
+}
+
+.logout-button:hover {
+    background-color: #c82333 !important;
+}
+
+/* Tabla de documentos */
+.document-actions .btn {
+    background-color: #0857b3;
+    color: white;
+    border-radius: 6px;
+    padding: 5px 12px;
+    transition: all 0.3s ease-in-out;
+}
+
+.document-actions .btn:hover {
+    background-color: #82bcff;
+    color: #fff;
+}
+
+/* Modal */
+.upload-modal .modal-body {
+    padding: 2rem;
+}
+
+/* Lista de archivos seleccionados */
+.upload-modal ul {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px dashed #0857b3;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.upload-modal ul li {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Barra de progreso personalizada */
+.progress {
+    height: 25px;
+    border-radius: 12px;
+    background-color: #e9ecef;
+    margin: 1rem 0;
+}
+
+.progress-bar {
+    background-color: #0857b3;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .document-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .document-actions .btn {
+        width: 100%;
+    }
+}

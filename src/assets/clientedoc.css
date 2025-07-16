@@ -1,0 +1,49 @@
+/* Modal de carga */
+.upload-modal .modal-body {
+    padding: 2rem;
+}
+
+/* Lista de archivos seleccionados */
+.upload-modal ul {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px dashed #0857b3;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.upload-modal ul li {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Barra de progreso personalizada */
+.progress {
+    height: 25px;
+    border-radius: 12px;
+    background-color: #e9ecef;
+    margin: 1rem 0;
+}
+
+.progress-bar {
+    background-color: #0857b3;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsive para tabla de documentos */
+@media (max-width: 768px) {
+    .document-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .document-actions .btn {
+        width: 100%;
+    }
+}

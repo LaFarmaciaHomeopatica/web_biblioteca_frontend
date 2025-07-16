@@ -24,10 +24,9 @@ const Usuarios = () => {
             .catch(error => console.error('Error al obtener usuarios:', error));
     }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem('authToken');
-        navigate('/admin');
-    };
+const handleBack = () => {
+    navigate('/admin'); // NO borra el token
+};
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
@@ -113,9 +112,9 @@ const Usuarios = () => {
                             height="40"
                             className="d-inline-block align-top me-2"
                         />
-                        <span className="usuarios-title">Panel Administrativo - Farmacia Homeopática</span>
+                        <span className="usuarios-title">BIBLIOTECALFH</span>
                     </Navbar.Brand>
-                    <Button onClick={handleLogout} className="logout-button">
+                    <Button onClick={handleBack} className="logout-button">
                         <i className="bi bi-box-arrow-right me-1"></i> volver
                     </Button>
                 </Container>
