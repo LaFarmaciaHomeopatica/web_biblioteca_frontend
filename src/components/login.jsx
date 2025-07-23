@@ -10,16 +10,13 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  // Aquí defines la función redirigirPorRol
   const redirigirPorRol = (rol) => {
     if (rol === 'Administrador') {
-      navigate('/admin'); // ruta para admin
-    } else if (rol === 'Farmacéutico') {
-      navigate('/cliente');
-    } else if (rol === 'Vendedor') {
+      navigate('/admin');
+    } else if (['Farmacéutico', 'Vendedor', 'visitador medico'].includes(rol)) {
       navigate('/cliente');
     } else {
-      navigate('/');  // ruta genérica o error
+      navigate('/');
     }
   };
 
@@ -36,7 +33,6 @@ const Login = () => {
       setEmail('');
       setPassword('');
 
-      // Rediriges según rol
       redirigirPorRol(response.data.user.rol);
 
     } catch (err) {
@@ -50,47 +46,42 @@ const Login = () => {
   };
 
   return (
-    <div className="container">
-      {/* Imagen de fondo */}
-      <div className="toggle-box">
-        <img
-          src={imagenFondo}
-          alt="Fondo de login"
-          className="imagen-fondo"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            borderRadius: '1px'
-          }}
-        />
-      </div>
+    <div className="login-layout">
+      <div className="login-card">
+        {/* Imagen (siempre visible) */}
+        <div className="login-image">
+          <img src={imagenFondo} alt="Fondo" />
+        </div>
 
-      {/* Formulario */}
-      <div className="form-box">
-        <form onSubmit={handleSubmit}>
-          <h2>Iniciar Sesión</h2>
+        {/* Formulario */}
+        <div className="login-form">
+          <h2 className="login-title">Iniciar Sesión</h2>
           {error && <div className="error-message">{error}</div>}
-          <div className="input-box">
-            <input
-              type="email"
-              placeholder="Correo electrónico"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="input-box">
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit" className="btn">Ingresar</button>
-        </form>
+
+          <form onSubmit={handleSubmit}>
+            <div className="input-box">
+              <input
+                type="email"
+                placeholder="Correo electrónico"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="input-box">
+              <input
+                type="password"
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <button type="submit" className="btn-login">Ingresar</button>
+          </form>
+        </div>
       </div>
     </div>
   );

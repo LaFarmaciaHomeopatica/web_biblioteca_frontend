@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-    Container, Navbar, Nav, Button, Row, Col, Card, Form
+    Container, Navbar, Nav, Button, Row, Col, Card
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import '../assets/clientedoc.css';
+import '../assets/capacitacion.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
 
-const Clientedoc = () => {
+const Capacitacion = () => {
     const navigate = useNavigate();
     const [documentos, setDocumentos] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
 
     useEffect(() => {
-        fetchDocumentos(1);
+        fetchDocumentos();
     }, []);
 
-    const fetchDocumentos = async (page = 1, search = '') => {
+    // ✅ Llamada al backend con paginación
+    const fetchDocumentos = async (page = 1) => {
         setLoading(true);
         setError(null);
         try {
@@ -33,40 +33,40 @@ const Clientedoc = () => {
                 return;
             }
 
-            const response = await axios.get(`http://localhost:8000/api/documentos?page=${page}&search=${search}`, {
+            const response = await axios.get( `http://localhost:8000/api/documentos?page=${page}&search=capacitacion`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            const data = response.data.data || [];
-            setDocumentos(data);
+            let data = response.data.data || [];
+
+            // ✅ Filtrar SOLO documentos que contengan "capacitacion"
+            const docsFiltrados = data.filter(doc =>
+                doc.nombre && doc.nombre.toLowerCase().includes('capacitacion')
+            );
+
+            setDocumentos(docsFiltrados);
             setCurrentPage(response.data.current_page);
             setLastPage(response.data.last_page);
-        } catch (err) {
-            console.error("Error al cargar documentos:", err.response || err);
+
+        } catch (error) {
+            console.error("Error al cargar documentos:", error.response || error);
             setError('Error al cargar los documentos');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSearchChange = (e) => {
-        const value = e.target.value;
-        setSearchTerm(value);
-        fetchDocumentos(1, value); // Reinicia desde página 1 con filtro
-    };
-
     const handleGoToVademecum = () => navigate('/vademecum');
-    const handleGoToCapacitacion = () => navigate('/capacitacion');
-    const handleBack = () => navigate('/cliente');
+    const handleGoToDocumentos = () => navigate('/clientedoc');
 
     return (
-        <div className="clientedoc-layout">
-            {/* ✅ HEADER */}
-            <Navbar expand="lg" className="clientedoc-header" variant="dark">
+        <div className="capacitacion-layout">
+            {/* HEADER */}
+            <Navbar expand="lg" className="capacitacion-header" variant="dark">
                 <Container fluid>
                     <Navbar.Brand className="d-flex align-items-center">
                         <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
-                        <span className="clientedoc-title">BIBLIOTECALFH</span>
+                        <span className="capacitacion-title">BIBLIOTECALFH</span>
                     </Navbar.Brand>
 
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
@@ -75,10 +75,10 @@ const Clientedoc = () => {
                             <Button onClick={handleGoToVademecum}>
                                 <i className="bi bi-book me-1"></i> Vademécum
                             </Button>
-                            <Button onClick={handleGoToCapacitacion}>
-                                <i className="bi bi-mortarboard me-1"></i> Capacitación
+                            <Button onClick={handleGoToDocumentos}>
+                                <i className="bi bi-file-earmark-text me-1"></i> Documentos
                             </Button>
-                            <Button onClick={handleBack} variant="secondary">
+                            <Button onClick={() => navigate('/cliente')} variant="secondary">
                                 <i className="bi bi-arrow-left-circle me-1"></i> Productos
                             </Button>
                         </Nav>
@@ -86,36 +86,26 @@ const Clientedoc = () => {
                 </Container>
             </Navbar>
 
-            {/* ✅ CONTENIDO */}
-            <Container fluid className="clientedoc-content">
+            {/* CONTENIDO */}
+            <Container fluid className="capacitacion-content">
                 <Row className="mt-4">
                     <Col xs={12}>
-                        <Card className="clientedoc-card">
+                        <Card className="capacitacion-card">
                             <Card.Body>
-                                <h2 className="clientedoc-title-main mb-4 text-center text-md-start">
-                                    Documentos PDF
+                                <h2 className="capacitacion-title-main mb-4 text-center text-md-start">
+                                    Documentos - Capacitación
                                 </h2>
-
-                                {/* ✅ Buscador */}
-                                <Form.Control
-                                    type="text"
-                                    placeholder="Buscar por nombre o fecha (dd/mm/yyyy)..."
-                                    value={searchTerm}
-                                    onChange={handleSearchChange}
-                                    className="mb-3"
-                                />
 
                                 {loading && <div className="text-center mb-3">Cargando documentos...</div>}
                                 {error && <div className="alert alert-danger">{error}</div>}
 
-                                {/* ✅ GRID DE DOCUMENTOS */}
+                                {/* ✅ Lista de documentos en formato GRID */}
                                 <div className="document-list">
                                     {documentos.length > 0 ? (
                                         documentos.map((doc, index) => (
                                             <div className="document-card" key={index}>
                                                 <div className="document-info">
                                                     <p><strong>Nombre:</strong> {doc.nombre}</p>
-                                                    <p><strong>Fecha:</strong> {new Date(doc.fecha_subida).toLocaleDateString('es-ES')}</p>
                                                 </div>
                                                 <div className="card-actions">
                                                     <Button
@@ -136,38 +126,36 @@ const Clientedoc = () => {
                                             </div>
                                         ))
                                     ) : (
-                                        <p className="text-center">No hay documentos disponibles</p>
+                                        <p className="text-center">No hay documentos de Capacitación</p>
                                     )}
                                 </div>
 
-                                {/* ✅ Paginación */}
-                                {lastPage > 1 && (
-                                    <div className="pagination-wrapper mt-3 d-flex justify-content-center">
-                                        <button
-                                            className="pagination-btn"
-                                            onClick={() => fetchDocumentos(currentPage - 1, searchTerm)}
-                                            disabled={currentPage === 1}
-                                        >
-                                            <i className="bi bi-chevron-left"></i>
-                                        </button>
-                                        <span className="pagination-info">{currentPage} / {lastPage}</span>
-                                        <button
-                                            className="pagination-btn"
-                                            onClick={() => fetchDocumentos(currentPage + 1, searchTerm)}
-                                            disabled={currentPage === lastPage}
-                                        >
-                                            <i className="bi bi-chevron-right"></i>
-                                        </button>
-                                    </div>
-                                )}
+                                {/* ✅ Paginación igual a Vademecum */}
+                                <div className="pagination-wrapper mt-3 d-flex justify-content-center">
+                                    <button
+                                        className="pagination-btn"
+                                        onClick={() => fetchDocumentos(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <i className="bi bi-chevron-left"></i>
+                                    </button>
+                                    <span className="pagination-info">{currentPage} / {lastPage}</span>
+                                    <button
+                                        className="pagination-btn"
+                                        onClick={() => fetchDocumentos(currentPage + 1)}
+                                        disabled={currentPage === lastPage}
+                                    >
+                                        <i className="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
                             </Card.Body>
                         </Card>
                     </Col>
                 </Row>
             </Container>
 
-            {/* ✅ FOOTER */}
-            <footer className="clientedoc-footer">
+            {/* FOOTER */}
+            <footer className="capacitacion-footer">
                 <Container fluid>
                     <Row className="py-3">
                         <Col md={12} className="text-center">
@@ -180,4 +168,4 @@ const Clientedoc = () => {
     );
 };
 
-export default Clientedoc;
+export default Capacitacion;

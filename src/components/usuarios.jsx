@@ -24,9 +24,9 @@ const Usuarios = () => {
             .catch(error => console.error('Error al obtener usuarios:', error));
     }, []);
 
-const handleBack = () => {
-    navigate('/admin'); // NO borra el token
-};
+    const handleBack = () => {
+        navigate('/admin'); // NO borra el token
+    };
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
@@ -68,7 +68,6 @@ const handleBack = () => {
     };
 
     const handleSave = () => {
-        console.log(currentUser);
         if (currentUser.id) {
             axios.put(`http://localhost:8000/api/usuarios/${currentUser.id}`, currentUser)
                 .then(() => {
@@ -101,10 +100,11 @@ const handleBack = () => {
 
     return (
         <div className="usuarios-layout">
-            {/* Header */}
-            <Navbar expand="lg" className="usuarios-header">
-                <Container fluid>
-                    <Navbar.Brand className="d-flex align-items-center">
+            {/* HEADER */}
+            <Navbar className="usuarios-header">
+                <Container fluid className="d-flex justify-content-between align-items-center">
+                    {/* Logo y título */}
+                    <div className="d-flex align-items-center">
                         <img
                             src={logo}
                             alt="Logo de la empresa"
@@ -113,22 +113,28 @@ const handleBack = () => {
                             className="d-inline-block align-top me-2"
                         />
                         <span className="usuarios-title">BIBLIOTECALFH</span>
-                    </Navbar.Brand>
-                    <Button onClick={handleBack} className="logout-button">
-                        <i className="bi bi-box-arrow-right me-1"></i> volver
+                    </div>
+
+                    {/* Botón volver solo visible en pantallas pequeñas */}
+                    <Button
+                        onClick={handleBack}
+                        className="logout-button d-block "
+                    >
+                        <i className="bi bi-arrow-left-circle me-1"></i> Volver
                     </Button>
                 </Container>
             </Navbar>
 
-            {/* Contenido */}
-            <Container fluid className="usuarios-content mt-4">
+            {/* CONTENIDO */}
+            <Container fluid className="usuarios-content mt-4 px-3 px-md-5">
                 <Card className="usuarios-card">
                     <Card.Body>
-                        <div className="d-flex justify-content-between align-items-center mb-4">
-                            <Button variant="success" onClick={handleCreateUser}>
+                        {/* ENCABEZADO + BUSCADOR RESPONSIVE */}
+                        <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-2">
+                            <Button variant="success" onClick={handleCreateUser} className="w-100 w-md-auto">
                                 <i className="bi bi-plus-circle me-1"></i> Nuevo Usuario
                             </Button>
-                            <Form.Group className="mb-0" style={{ width: '300px' }}>
+                            <Form.Group className="mb-0 w-100 w-md-50">
                                 <Form.Control
                                     type="text"
                                     placeholder="Buscar por ID, nombre o correo..."
@@ -137,50 +143,86 @@ const handleBack = () => {
                             </Form.Group>
                         </div>
 
-                        <Table striped bordered hover responsive>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
-                                    <th>Correo</th>
-                                    <th>Rol</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredUsers.map((usuario) => (
-                                    <tr key={usuario.id}>
-                                        <td>{usuario.id}</td>
-                                        <td>{usuario.name}</td>
-                                        <td>{usuario.email}</td>
-                                        <td>{usuario.rol || 'Sin rol'}</td>
-                                        <td>
-                                            <Button
-                                                variant="primary"
-                                                size="sm"
-                                                className="me-2"
-                                                onClick={() => handleEdit(usuario)}
-                                            >
-                                                <i className="bi bi-pencil"></i> Editar
-                                            </Button>
-                                            <Button
-                                                variant="danger"
-                                                size="sm"
-                                                onClick={() => handleDelete(usuario.id)}
-                                            >
-                                                <i className="bi bi-trash"></i> Eliminar
-                                            </Button>
-                                        </td>
+                        {/* TABLA (visible solo en pantallas grandes) */}
+                        <div className="table-responsive d-none d-md-block">
+                            <Table striped bordered hover>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre</th>
+                                        <th>Correo</th>
+                                        <th>Rol</th>
+                                        <th>Acciones</th>
                                     </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredUsers.map((usuario) => (
+                                        <tr key={usuario.id}>
+                                            <td>{usuario.id}</td>
+                                            <td>{usuario.name}</td>
+                                            <td>{usuario.email}</td>
+                                            <td>{usuario.rol || 'Sin rol'}</td>
+                                            <td className="d-flex flex-wrap gap-2">
+                                                <Button
+                                                    variant="primary"
+                                                    size="sm"
+                                                    onClick={() => handleEdit(usuario)}
+                                                >
+                                                    <i className="bi bi-pencil"></i> Editar
+                                                </Button>
+                                                <Button
+                                                    variant="danger"
+                                                    size="sm"
+                                                    onClick={() => handleDelete(usuario.id)}
+                                                >
+                                                    <i className="bi bi-trash"></i> Eliminar
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </Table>
+                        </div>
+
+                        {/* CARDS (solo en pantallas pequeñas) */}
+                        <div className="d-md-none">
+                            <Row>
+                                {filteredUsers.map((usuario) => (
+                                    <Col xs={12} key={usuario.id} className="mb-3">
+                                        <Card className="shadow-sm">
+                                            <Card.Body>
+                                                <h5 className="fw-bold">{usuario.name}</h5>
+                                                <p className="mb-1"><strong>ID:</strong> {usuario.id}</p>
+                                                <p className="mb-1"><strong>Correo:</strong> {usuario.email}</p>
+                                                <p className="mb-3"><strong>Rol:</strong> {usuario.rol || 'Sin rol'}</p>
+                                                <div className="d-flex flex-wrap gap-2">
+                                                    <Button
+                                                        variant="primary"
+                                                        size="sm"
+                                                        onClick={() => handleEdit(usuario)}
+                                                    >
+                                                        <i className="bi bi-pencil"></i> Editar
+                                                    </Button>
+                                                    <Button
+                                                        variant="danger"
+                                                        size="sm"
+                                                        onClick={() => handleDelete(usuario.id)}
+                                                    >
+                                                        <i className="bi bi-trash"></i> Eliminar
+                                                    </Button>
+                                                </div>
+                                            </Card.Body>
+                                        </Card>
+                                    </Col>
                                 ))}
-                            </tbody>
-                        </Table>
+                            </Row>
+                        </div>
                     </Card.Body>
                 </Card>
             </Container>
 
-            {/* Modal */}
-            <Modal show={showModal} onHide={() => setShowModal(false)}>
+            {/* MODAL */}
+            <Modal show={showModal} onHide={() => setShowModal(false)} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>{currentUser.id ? 'Editar Usuario' : 'Nuevo Usuario'}</Modal.Title>
                 </Modal.Header>
@@ -249,7 +291,7 @@ const handleBack = () => {
                 </Modal.Footer>
             </Modal>
 
-            {/* Footer */}
+            {/* FOOTER */}
             <footer className="usuarios-footer">
                 <Container fluid>
                     <Row className="py-3">

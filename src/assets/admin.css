@@ -13,7 +13,8 @@
 body {
   background: linear-gradient(90deg, #ffffff, #82bcff);
   min-height: 100vh;
-  overflow-x: hidden; /* Evita scroll horizontal */
+  overflow-x: hidden;
+  /* Evita scroll horizontal */
 }
 
 /* Estructura principal */
@@ -52,15 +53,16 @@ body {
 /* Estilo de botón de salir para todas las vistas */
 .logout-button {
   background: transparent !important;
-  border: 2px solid rgb(235, 33, 33) !important;
+  border: 2px solid rgb(0, 0, 0) !important;
   border-radius: 8px !important;
-  color: rgb(255, 109, 109) !important;
+  color: rgb(185, 148, 148) !important;
   font-weight: 600 !important;
   transition: all 0.2s !important;
   padding: 6px 12px !important;
-  max-width: 150px;
-  white-space: nowrap; 
-  text-align: center; 
+  min-width: 150px;
+  /* ✅ Ancho uniforme */
+  white-space: nowrap;
+  text-align: center;
 }
 
 .logout-button:hover {
@@ -73,7 +75,7 @@ body {
 /* Contenido principal (centrado) */
 .admin-content {
   flex: 1;
-  padding: 2rem 15px;
+  padding: 3rem 15px;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;

@@ -9,11 +9,11 @@
   font-family: "Poppins", sans-serif;
 }
 
-/* Body sin márgenes */
+/* Body */
 body {
   background: linear-gradient(90deg, #ffffff, #82bcff);
   min-height: 100vh;
-  overflow-x: hidden; /* Evita scroll horizontal */
+  overflow-x: hidden;
 }
 
 /* Estructura principal */
@@ -24,7 +24,7 @@ body {
   width: 100%;
 }
 
-/* HEADER - Full width */
+/* HEADER */
 .usuarios-header {
   background: #0857b3 !important;
   padding: 1rem 0;
@@ -49,33 +49,16 @@ body {
   color: white !important;
 }
 
-/* Contenido principal (centrado pero no full-width) */
+/* Contenido principal */
 .usuarios-content {
   flex: 1;
-  padding: 2rem 15px;
-  max-width: 1200px;
+  padding: 1rem 15px;
+  max-width: 90vw;
   margin: 0 auto;
   width: 100%;
 }
 
-/* Tarjetas */
-.usuarios-card {
-  border: none !important;
-  border-radius: 5px !important;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1) !important;
-  background: white !important;
-}
-
-.usuarios-card h4 {
-  color: #333;
-  font-weight: 600;
-}
-
-.usuarios-card p {
-  color: #666;
-}
-
-/* FOOTER - Full width */
+/* FOOTER */
 .usuarios-footer {
   background: #333 !important;
   padding: 0.5rem 0 !important;
@@ -93,15 +76,16 @@ body {
   margin-right: 0.5rem;
 }
 
-
-/* Botones generales */
+/* Botones */
 .btn {
   background: #0857b3 !important;
   border: none !important;
-  border-radius: 8px !important;
-  padding: 10px 20px !important;
-  font-weight: 500 !important;
+  border-radius: 9px !important;
+  padding: 10px 50px !important;
+  font-weight: 400 !important;
   transition: all 0.3s !important;
+  margin-right: 8px;
+  color: white !important;
 }
 
 .btn:hover {
@@ -109,36 +93,117 @@ body {
   transform: translateY(-2px);
 }
 
+/* Botón especial para acciones (Editar/Eliminar) */
+.btn-ver {
+  background: #0857b3 !important;
+  color: white !important;
+  border-radius: 8px !important;
+  padding: 10px 20px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s !important;
+}
+
+.btn-ver:hover {
+  background: #82bcff !important;
+  transform: translateY(-2px);
+}
+
+/* Tabla */
+.table-scroll-wrapper {
+  position: relative;
+  width: 100%;
+  margin: 2rem 0;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  border-radius: 9px;
+  background: white;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  scrollbar-width: none;
+}
+
+.table-container::-webkit-scrollbar {
+  display: none;
+}
+
+table {
+  width: 100%;
+  min-width: 1200px;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+th {
+  background-color: #0857b3;
+  color: white;
+  position: sticky;
+  top: 0;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+tr:hover {
+  background-color: #e9f5ff;
+}
+
+/* ✅ Paginación */
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.pagination {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+}
+
+.pagination .page-item .page-link {
+  background: #0857b3;
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.pagination .page-item .page-link:hover {
+  background: #82bcff;
+  transform: scale(1.1);
+}
+
+.pagination .page-item.disabled .page-link {
+  background: #cccccc;
+  cursor: not-allowed;
+}
+
 /* Responsive */
-@media (max-width: 992px) {
-  .usuarios-header {
-    border-radius: 0;
-  }
-  
-  .nav-button {
-    margin: 0.5rem 0;
-    display: block;
-    text-align: center;
-  }
-}
-
 @media (max-width: 768px) {
-  .usuarios-footer .col-md-4 {
-    text-align: center !important;
-    margin-bottom: 1rem;
+  th, td {
+    font-size: 0.85rem;
+    padding: 8px 10px;
   }
   
-  .usuarios-content {
-    padding: 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .navbar-brand {
-    font-size: 1rem;
-  }
-  
-  .usuarios-card {
-    border-radius: 10px !important;
+  .pagination .page-item .page-link {
+    width: 36px;
+    height: 36px;
   }
 }

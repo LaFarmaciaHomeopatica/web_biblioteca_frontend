@@ -1,18 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
     Container, Navbar, Button, Row, Col,
-    Card, Table, Modal, Form, ProgressBar, Alert
+    Card, Modal, Form, ProgressBar, Alert
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import '../assets/consulta.css';
+import '../assets/documentos.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
 
 const Documentos = () => {
     const navigate = useNavigate();
     const [documentos, setDocumentos] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [lastPage, setLastPage] = useState(1);
     const [showModal, setShowModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingDoc, setEditingDoc] = useState(null);
+    const [newDocName, setNewDocName] = useState('');
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -20,47 +25,77 @@ const Documentos = () => {
     const [successMessage, setSuccessMessage] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // ✅ Obtener encabezados con token
+    const cancelTokenSourceRef = useRef(null);
+
     const getAuthHeaders = () => {
         const token = localStorage.getItem('authToken');
         return token ? { Authorization: `Bearer ${token}` } : null;
     };
 
-    // ✅ Volver al panel sin cerrar sesión
     const handlelogout = () => {
         navigate('/admin');
     };
 
-    // ✅ Cargar documentos al iniciar
-    useEffect(() => {
-        const fetchDocumentos = async () => {
-            setLoading(true);
-            try {
-                const headers = getAuthHeaders();
-                if (!headers) {
-                    navigate('/'); // Si no hay token, vuelve al login
-                    return;
-                }
-                const response = await axios.get('http://localhost:8000/api/documentos', { headers });
-                setDocumentos(response.data.data || response.data);
-            } catch (error) {
-                setError('Error al cargar los documentos');
-            } finally {
-                setLoading(false);
+    /** ✅ Fetch documentos con búsqueda */
+    const fetchDocumentos = useCallback(async (page = 1, term = '') => {
+        if (cancelTokenSourceRef.current) {
+            cancelTokenSourceRef.current.cancel('Cancelado por nueva solicitud');
+        }
+        cancelTokenSourceRef.current = axios.CancelToken.source();
+
+        setLoading(true);
+        try {
+            const headers = getAuthHeaders();
+            if (!headers) {
+                navigate('/');
+                return;
             }
-        };
-        fetchDocumentos();
+            const response = await axios.get(`http://localhost:8000/api/documentos`, {
+                headers,
+                params: {
+                    page,
+                    search: term // ✅ Parámetro enviado al backend
+                },
+                cancelToken: cancelTokenSourceRef.current.token
+            });
+
+            setDocumentos(response.data.data);
+            setCurrentPage(response.data.current_page);
+            setLastPage(response.data.last_page);
+        } catch (error) {
+            if (!axios.isCancel(error)) {
+                setError('Error al cargar los documentos');
+            }
+        } finally {
+            setLoading(false);
+        }
     }, [navigate]);
 
-    // ✅ Manejar selección de archivos
+    /** ✅ Llamada inicial y cuando cambia la página */
+    useEffect(() => {
+        fetchDocumentos(currentPage, searchTerm);
+        return () => {
+            if (cancelTokenSourceRef.current) {
+                cancelTokenSourceRef.current.cancel('Componente desmontado');
+            }
+        };
+    }, [currentPage, searchTerm, fetchDocumentos]);
+
+    /** ✅ Búsqueda con debounce */
+    useEffect(() => {
+        const delayDebounce = setTimeout(() => {
+            fetchDocumentos(1, searchTerm); // ✅ Reinicia en la página 1 al buscar
+        }, 500);
+
+        return () => clearTimeout(delayDebounce);
+    }, [searchTerm, fetchDocumentos]);
+
     const handleFileChange = (e) => {
         setSelectedFiles([...e.target.files]);
     };
 
-    // ✅ Subir documentos
     const handleUpload = async () => {
         if (selectedFiles.length === 0) return;
-
         setLoading(true);
         setError(null);
         setUploadProgress(0);
@@ -74,7 +109,7 @@ const Documentos = () => {
             const headers = getAuthHeaders();
             if (!headers) return;
 
-            const response = await axios.post(
+            await axios.post(
                 'http://localhost:8000/api/documentos/upload',
                 formData,
                 {
@@ -90,7 +125,7 @@ const Documentos = () => {
             );
 
             setSuccessMessage(`${selectedFiles.length} documentos subidos correctamente`);
-            setDocumentos([...documentos, ...response.data.documentos]);
+            fetchDocumentos(currentPage, searchTerm);
             setSelectedFiles([]);
             setShowModal(false);
         } catch (error) {
@@ -100,7 +135,6 @@ const Documentos = () => {
         }
     };
 
-    // ✅ Eliminar documento
     const handleDeleteDocument = async (id) => {
         if (!window.confirm('¿Estás seguro de eliminar este documento?')) return;
 
@@ -114,7 +148,7 @@ const Documentos = () => {
             await axios.delete(`http://localhost:8000/api/documentos/${id}`, { headers });
 
             setSuccessMessage('Documento eliminado correctamente');
-            setDocumentos(documentos.filter(doc => doc.id !== id));
+            fetchDocumentos(currentPage, searchTerm);
         } catch (error) {
             setError('Error al eliminar el documento');
         } finally {
@@ -122,18 +156,51 @@ const Documentos = () => {
         }
     };
 
-    const filteredDocs = documentos.filter(doc =>
-        doc.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const handleEditClick = (doc) => {
+        setEditingDoc(doc);
+        setNewDocName(doc.nombre);
+        setShowEditModal(true);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingDoc || !newDocName.trim()) return;
+        setLoading(true);
+        setError(null);
+
+        try {
+            const headers = getAuthHeaders();
+            if (!headers) return;
+
+            await axios.put(
+                `http://localhost:8000/api/documentos/${editingDoc.id}`,
+                { nombre: newDocName },
+                { headers }
+            );
+
+            setSuccessMessage('Nombre del documento actualizado correctamente');
+            fetchDocumentos(currentPage, searchTerm);
+            setShowEditModal(false);
+        } catch (error) {
+            setError(error.response?.data?.message || 'Error al actualizar el documento');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /** ✅ Paginación */
+    const handlePageChange = (newPage) => {
+        if (!loading && newPage >= 1 && newPage <= lastPage) {
+            setCurrentPage(newPage);
+        }
+    };
 
     return (
-        <div className="consulta-layout">
-            {/* Header */}
-            <Navbar expand="lg" className="admin-header">
+        <div className="documentos-layout">
+            <Navbar expand="lg" className="documentos-header">
                 <Container fluid>
                     <Navbar.Brand className="d-flex align-items-center">
                         <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
-                        <span className="consulta-title">BIBLIOTECALFH</span>
+                        <span className="documentos-title">BIBLIOTECALFH</span>
                     </Navbar.Brand>
                     <Button onClick={handlelogout} className="logout-button">
                         <i className="bi bi-arrow-left-circle me-1"></i> Volver
@@ -141,118 +208,132 @@ const Documentos = () => {
                 </Container>
             </Navbar>
 
-            {/* Contenido principal */}
-            <Container fluid className="consulta-content">
+            <Container fluid className="documentos-content">
                 <Row className="mt-4">
                     <Col>
-                        <Card className="consulta-card">
+                        <Card className="documentos-card">
                             <Card.Body>
                                 <h4 className="mb-4">Documentos PDF</h4>
 
-                                <div className="d-flex justify-content-between mb-4">
-                                    <Button onClick={() => setShowModal(true)} disabled={loading}>
+                                <div className="documentos-toolbar mb-3">
+                                    <Button
+                                        onClick={() => setShowModal(true)}
+                                        disabled={loading}
+                                        className="btn-cargar-documentos"
+                                    >
                                         <i className="bi bi-upload me-2"></i> Cargar Documentos
                                     </Button>
 
                                     <Form.Control
                                         type="text"
-                                        placeholder="Buscar por nombre..."
-                                        style={{ width: '300px' }}
+                                        placeholder="Buscar por nombre"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
 
-                                {loading && !showModal && <div className="text-center mb-3">Cargando...</div>}
+                                {loading && !showModal && !showEditModal && <div className="text-center mb-3">Cargando...</div>}
                                 {error && <Alert variant="danger">{error}</Alert>}
                                 {successMessage && <Alert variant="success">{successMessage}</Alert>}
 
-                                <div className="table-scroll-wrapper">
-                                    <div className="table-container">
-                                        <Table striped bordered hover responsive className="product-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Nombre</th>
-                                                    <th>Fecha de Subida</th>
-                                                    <th>Acciones</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {filteredDocs.map((doc, index) => (
-                                                    <tr key={index}>
-                                                        <td>{doc.nombre}</td>
-                                                        <td>{new Date(doc.fecha_subida).toLocaleDateString()}</td>
-                                                        <td>
+                                {/* CARDS */}
+                                <Row>
+                                    {documentos.length > 0 ? (
+                                        documentos.map((doc) => (
+                                            <Col xs={12} md={6} lg={4} key={doc.id} className="mb-4">
+                                                <Card className="document-card">
+                                                    <Card.Body>
+                                                        <h5>{doc.nombre}</h5>
+                                                        <p className="mb-2">Fecha de subida: <strong>{new Date(doc.fecha_subida).toLocaleDateString('es-ES')}</strong></p>
+                                                        <div className="d-flex flex-wrap gap-2">
                                                             <Button
-                                                                variant="primary"
+                                                                size="sm"
+                                                                onClick={() => handleEditClick(doc)}
+                                                                disabled={loading}
+                                                                variant="warning"
+                                                            >
+                                                                <i className="bi bi-pencil me-1"></i> Editar
+                                                            </Button>
+                                                            <Button
                                                                 size="sm"
                                                                 onClick={() => window.open(`http://localhost:8000/storage/${doc.ruta}`, '_blank')}
                                                                 disabled={loading}
+                                                                variant="primary"
                                                             >
-                                                                Ver
-                                                            </Button>{' '}
+                                                                <i className="bi bi-eye me-1"></i> Ver
+                                                            </Button>
                                                             <Button
-                                                                variant="danger"
                                                                 size="sm"
                                                                 onClick={() => handleDeleteDocument(doc.id)}
                                                                 disabled={loading}
+                                                                variant="danger"
                                                             >
-                                                                Eliminar
+                                                                <i className="bi bi-trash me-1"></i> Eliminar
                                                             </Button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </Table>
+                                                        </div>
+                                                    </Card.Body>
+                                                </Card>
+                                            </Col>
+                                        ))
+                                    ) : (
+                                        <div className="text-center mt-3">No se encontraron documentos</div>
+                                    )}
+                                </Row>
+
+                                {lastPage > 1 && (
+                                    <div className="pagination-wrapper mt-4">
+                                        <button
+                                            className="pagination-btn"
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                            disabled={currentPage === 1 || loading}
+                                        >
+                                            <i className="bi bi-chevron-left"></i>
+                                        </button>
+
+                                        <span className="pagination-info">
+                                            {currentPage} / {lastPage}
+                                        </span>
+
+                                        <button
+                                            className="pagination-btn"
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                            disabled={currentPage === lastPage || loading}
+                                        >
+                                            <i className="bi bi-chevron-right"></i>
+                                        </button>
                                     </div>
-                                </div>
+                                )}
                             </Card.Body>
                         </Card>
                     </Col>
                 </Row>
             </Container>
 
-            {/* Modal para subir documentos */}
-            <Modal show={showModal} onHide={() => !loading && setShowModal(false)} size="lg">
+            {/* Modal Cargar Documentos */}
+            <Modal show={showModal} onHide={() => setShowModal(false)}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Cargar Documentos PDF</Modal.Title>
+                    <Modal.Title>Cargar Documentos</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <Form>
-                        <Form.Group className="mb-4">
-                            <Form.Label>Selecciona los archivos PDF (múltiple)</Form.Label>
-                            <Form.Control
-                                type="file"
-                                multiple
-                                accept=".pdf"
-                                onChange={handleFileChange}
-                                disabled={loading}
-                            />
-                        </Form.Group>
-
-                        {selectedFiles.length > 0 && (
-                            <div className="mb-3">
-                                <h6>Archivos seleccionados:</h6>
-                                <ul>
-                                    {Array.from(selectedFiles).map((file, index) => (
-                                        <li key={index}>{file.name} ({(file.size / 1024).toFixed(2)} KB)</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-
+                    <Form.Group>
+                        <Form.Label>Seleccionar archivos PDF</Form.Label>
+                        <Form.Control
+                            type="file"
+                            multiple
+                            accept=".pdf"
+                            onChange={handleFileChange}
+                        />
                         {uploadProgress > 0 && (
                             <ProgressBar
                                 now={uploadProgress}
                                 label={`${uploadProgress}%`}
-                                animated
-                                className="mb-3"
+                                className="mt-3"
                             />
                         )}
-                    </Form>
+                    </Form.Group>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowModal(false)} disabled={loading}>
+                    <Button variant="secondary" onClick={() => setShowModal(false)}>
                         Cancelar
                     </Button>
                     <Button
@@ -265,8 +346,32 @@ const Documentos = () => {
                 </Modal.Footer>
             </Modal>
 
-            {/* Footer */}
-            <footer className="consulta-footer">
+            {/* Modal Editar Documento */}
+            <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Editar Documento</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form.Group>
+                        <Form.Label>Nuevo nombre</Form.Label>
+                        <Form.Control
+                            type="text"
+                            value={newDocName}
+                            onChange={(e) => setNewDocName(e.target.value)}
+                        />
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+                        Cancelar
+                    </Button>
+                    <Button variant="primary" onClick={handleSaveEdit} disabled={loading}>
+                        {loading ? 'Guardando...' : 'Guardar Cambios'}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <footer className="documentos-footer">
                 <Container fluid>
                     <Row className="py-3">
                         <Col md={12} className="text-center">

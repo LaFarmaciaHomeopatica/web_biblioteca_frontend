@@ -6,14 +6,14 @@ body {
 }
 
 /* Layout */
-.vademecum-layout {
+.capacitacion-layout {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
 
 /* HEADER */
-.vademecum-header {
+.capacitacion-header {
     background: #0857b3 !important;
     padding: 0.5rem 1rem;
     width: 100vw;
@@ -24,14 +24,14 @@ body {
     margin-right: -50vw;
 }
 
-.vademecum-title {
+.capacitacion-title {
     color: white;
     font-weight: bold;
     font-size: 1.2rem;
 }
 
 /* Contenido */
-.vademecum-content {
+.capacitacion-content {
     flex: 1;
     padding: 2rem 15px;
     max-width: 1400px;
@@ -39,20 +39,19 @@ body {
     width: 100%;
 }
 
-/* Título principal más grande en PC */
-.vademecum-title-main {
+.capacitacion-title-main {
     font-size: 1.5rem;
     font-weight: bold;
 }
 
 @media (min-width: 992px) {
-    .vademecum-title-main {
+    .capacitacion-title-main {
         font-size: 2rem;
     }
 }
 
 /* Footer */
-.vademecum-footer {
+.capacitacion-footer {
     background: #333 !important;
     padding: 0.5rem 0 !important;
     color: white !important;
@@ -64,21 +63,16 @@ body {
     margin-right: -50vw;
 }
 
-.vademecum-footer i {
-    color: #82bcff !important;
-    margin-right: 0.5rem;
-}
-
-/* ✅ GRID PARA 3 COLUMNAS */
-.product-list {
+/* ✅ GRID PARA DOCUMENTOS */
+.document-list {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* ✅ EXACTAMENTE 3 COLUMNAS */
+    grid-template-columns: repeat(3, 1fr); /* ✅ EXACTAMENTE 3 COLUMNAS EN ESCRITORIO */
     gap: 25px;
     margin-top: 20px;
 }
 
 /* ✅ CARD */
-.product-card {
+.document-card {
     background: #fff;
     border-radius: 10px;
     padding: 15px;
@@ -90,8 +84,8 @@ body {
     height: 100%; /* Para uniformidad */
 }
 
-/* ✅ INFO PRODUCTO */
-.product-info p {
+/* ✅ INFO DOCUMENTO */
+.document-info p {
     margin: 0;
     font-size: 0.95rem;
     color: #333;
@@ -121,13 +115,13 @@ body {
 
 /* ✅ Responsive: 2 columnas en tablets, 1 en móvil */
 @media (max-width: 992px) {
-    .product-list {
+    .document-list {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (max-width: 600px) {
-    .product-list {
+    .document-list {
         grid-template-columns: 1fr;
     }
 }
