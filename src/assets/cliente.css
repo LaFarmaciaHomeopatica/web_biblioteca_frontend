@@ -1,5 +1,5 @@
 body.cliente-page {
-    background: linear-gradient(90deg, #ffffff, #82bcff);
+    background: linear-gradient(90deg, #ffffff, #bcd3f2);
     min-height: 100vh;
     overflow-x: hidden;
 }
@@ -12,7 +12,7 @@ body.cliente-page {
 
 /* HEADER */
 .cliente-header {
-    background: #0857b3 !important;
+    background: #00A3E0 !important;
     padding: 0.5rem 1rem;
     width: 100vw;
     position: relative;
@@ -20,12 +20,31 @@ body.cliente-page {
     right: 50%;
     margin-left: -50vw;
     margin-right: -50vw;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .cliente-title {
-    color: white;
+    color: rgb(0, 0, 0);
     font-weight: bold;
     font-size: 1.2rem;
+}
+
+/* ✅ Botones del header */
+.header-buttons .btn {
+    background: #000 !important; /* Negro */
+    color: #fff !important;      /* Texto blanco */
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 8px 16px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+}
+
+.header-buttons .btn:hover {
+    background: #333 !important; /* Negro más claro en hover */
+    transform: translateY(-2px);
 }
 
 /* Contenido */
@@ -111,17 +130,33 @@ body.cliente-page {
 }
 
 .product-info strong {
-    color: #0857b3;
+    color: #013878;
 }
 
-/* Botón Ver */
+/* ✅ Botones globales */
+.btn {
+    background: #245364 !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 8px 16px !important;
+    font-weight: 500 !important;
+    color: white !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn:hover {
+    background: #33BAE8 !important;
+    transform: translateY(-2px);
+}
+
+/* ✅ Botón Ver dentro de cards */
 .card-actions {
     display: flex;
     justify-content: flex-end;
 }
 
 .card-actions .btn-ver {
-    background: #0857b3 !important;
+    background: #006B9A !important;
     border: none !important;
     padding: 6px 12px !important;
     font-size: 0.85rem;
@@ -130,7 +165,7 @@ body.cliente-page {
 }
 
 .card-actions .btn-ver:hover {
-    background: #82bcff !important;
+    background: #33BAE8 !important;
 }
 
 /* Responsive */
@@ -142,17 +177,18 @@ body.cliente-page {
 
     .header-buttons .btn {
         width: 100%;
+
     }
 }
 
 /* ===== Estilos para modal inactivo ===== */
 .inactive-modal .modal-content {
-    border: 3px solid #dc3545; /* Borde rojo */
+    border: 3px solid #910048; /* Borde rojo */
     border-radius: 8px;
 }
 
 .inactive-header {
-    background-color: #dc3545 !important; /* Header rojo */
+    background-color: #910048 !important; /* Header rojo */
     color: white !important;
 }
 

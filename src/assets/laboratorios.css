@@ -1,0 +1,121 @@
+/* ===== Fondo general y layout ===== */
+body.laboratorios-page {
+    background: linear-gradient(90deg, #ffffff, #82bcff);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.laboratorios-layout {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== HEADER ===== */
+.laboratorios-header {
+    background: #00A3E0 !important;
+    padding: 0.5rem 1rem;
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+}
+
+.cliente-title {
+    color: rgb(0, 0, 0);
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* ===== Contenido ===== */
+.laboratorios-content {
+    flex: 1;
+    padding: 2rem 15px;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.laboratorios-title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #00A3E0;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+}
+
+/* ===== Cards de laboratorios ===== */
+.laboratorio-card {
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: center;
+    cursor: pointer;
+    padding-bottom: 10px;
+}
+
+.laboratorio-card:hover {
+    transform: scale(1.06);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== Imagen con efecto blanco y negro ===== */
+.laboratorio-img {
+    width: 100%;
+    height: 160px;
+    object-fit: contain;
+    background-color: #f9f9f9;
+    padding: 10px;
+    
+    /* ✅ Blanco y negro por defecto */
+    filter: grayscale(100%);
+    transition: filter 0.5s ease; /* ✅ Transición suave */
+}
+
+/* ✅ Al pasar el cursor, la imagen vuelve a color */
+.laboratorio-card:hover .laboratorio-img {
+    filter: grayscale(0%);
+}
+
+.laboratorio-nombre {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #00A3E0;
+    margin: 8px 0 0;
+    text-transform: uppercase;
+}
+
+/* ===== Footer ===== */
+.cliente-footer {
+    background: #333 !important;
+    padding: 0.5rem 0 !important;
+    color: white !important;
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+}
+
+.cliente-footer i {
+    color: #82bcff !important;
+    margin-right: 0.5rem;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .laboratorio-img {
+        height: 130px;
+    }
+}
+
+@media (max-width: 576px) {
+    .laboratorio-img {
+        height: 110px;
+    }
+}

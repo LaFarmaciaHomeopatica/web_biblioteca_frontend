@@ -33,23 +33,19 @@ const Consulta = () => {
 
     const handleBack = () => navigate('/admin');
 
-    // ✅ Cargar productos con búsqueda y paginación
     const fetchProductos = useCallback(async (page = 1) => {
         setLoading(true);
         setError(null);
-
         try {
             let url = `http://localhost:8000/api/productos?page=${page}`;
-
             if (searchTerm.trim() !== '') {
                 url += `&search=${encodeURIComponent(searchTerm)}&filterBy=${encodeURIComponent(filterBy)}`;
             }
-
             const response = await axios.get(url);
             setProductos(response.data.data || []);
             setCurrentPage(response.data.current_page);
             setLastPage(response.data.last_page);
-        } catch (error) {
+        } catch {
             setError('Error al cargar los productos');
         } finally {
             setLoading(false);
@@ -103,7 +99,7 @@ const Consulta = () => {
             });
             setSuccessMessage('Producto eliminado correctamente');
             fetchProductos(currentPage);
-        } catch (error) {
+        } catch {
             setError('Error al eliminar el producto');
         } finally {
             setLoading(false);
@@ -130,12 +126,20 @@ const Consulta = () => {
             setShowEditModal(false);
             setSuccessMessage(isNewProduct ? 'Producto creado exitosamente' : 'Producto actualizado correctamente');
             fetchProductos(currentPage);
-        } catch (error) {
+        } catch {
             setError(isNewProduct ? 'Error al crear el producto' : 'Error al actualizar el producto');
         } finally {
             setLoading(false);
         }
     };
+
+    // ✅ Ocultar mensaje de éxito después de 3 segundos
+    useEffect(() => {
+        if (successMessage) {
+            const timer = setTimeout(() => setSuccessMessage(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [successMessage]);
 
     return (
         <div className="consulta-layout">
@@ -210,55 +214,67 @@ const Consulta = () => {
                         </div>
 
                         {/* ✅ Paginación */}
-                        <div className="pagination-wrapper mt-3 d-flex justify-content-center gap-2">
-                            <button
-                                className="pagination-btn"
-                                onClick={() => fetchProductos(currentPage - 1)}
-                                disabled={currentPage === 1}
-                            >
-                                <i className="bi bi-chevron-left"></i>
-                            </button>
-                            <span>{currentPage} / {lastPage}</span>
-                            <button
-                                className="pagination-btn"
-                                onClick={() => fetchProductos(currentPage + 1)}
-                                disabled={currentPage === lastPage}
-                            >
-                                <i className="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
+                        {lastPage > 1 && (
+                            <div className="pagination-wrapper mt-3">
+                                <button
+                                    className="pagination-btn"
+                                    onClick={() => fetchProductos(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    <i className="bi bi-chevron-left"></i>
+                                </button>
+                                <span className="pagination-info">{currentPage} / {lastPage}</span>
+                                <button
+                                    className="pagination-btn"
+                                    onClick={() => fetchProductos(currentPage + 1)}
+                                    disabled={currentPage === lastPage}
+                                >
+                                    <i className="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        )}
                     </Card.Body>
                 </Card>
             </Container>
 
-            {/* ✅ MODAL Ver (con estilos dinámicos) */}
-            <Modal
-                show={showViewModal}
-                onHide={() => setShowViewModal(false)}
-                centered
-                dialogClassName={viewingProduct?.estado_producto?.toLowerCase() === 'inactivo' ? 'inactive-modal' : ''}
-            >
+            {/* ✅ MODAL Ver */}
+            <Modal show={showViewModal} onHide={() => setShowViewModal(false)} centered>
                 <Modal.Header
                     closeButton
-                    className={viewingProduct?.estado_producto?.toLowerCase() === 'inactivo' ? 'inactive-modal-header' : ''}
+                    style={{
+                        backgroundColor: viewingProduct?.estado_producto?.toLowerCase() === 'inactivo' ? '#dc3545' : '#0857b3',
+                        color: '#fff'
+                    }}
                 >
                     <Modal.Title>
                         Detalles del Producto
                         {viewingProduct?.estado_producto?.toLowerCase() === 'inactivo' && (
-                            <span className="badge bg-danger ms-2">INACTIVO</span>
+                            <span className="badge bg-light text-dark ms-2">INACTIVO</span>
                         )}
                     </Modal.Title>
                 </Modal.Header>
-                <Modal.Body
-                    className={viewingProduct?.estado_producto?.toLowerCase() === 'inactivo' ? 'inactive-modal-body' : ''}
-                >
-                    {viewingProduct && Object.keys(viewingProduct).map((key) => (
-                        <p key={key}><strong>{key}:</strong> {viewingProduct[key]}</p>
-                    ))}
+                <Modal.Body>
+                    {viewingProduct && (
+                        <>
+                            <p><strong>Nombre:</strong> {viewingProduct.nombre}</p>
+                            <p><strong>Estado Producto:</strong> {viewingProduct.estado_producto}</p>
+                            <p><strong>Precio Público:</strong> ${viewingProduct.precio_publico}</p>
+                            <p><strong>Precio Médico:</strong> ${viewingProduct.precio_medico}</p>
+                            <p><strong>IVA:</strong> {viewingProduct.iva}</p>
+                            <p><strong>Requiere Fórmula Médica:</strong> {viewingProduct.formula_medica}</p>
+                            <p><strong>Laboratorio:</strong> {viewingProduct.laboratorio}</p>
+                            <p><strong>Categoría:</strong> {viewingProduct.categoria}</p>
+                            <p><strong>Estado Registro:</strong> {viewingProduct.estado_registro}</p>
+                            <p><strong>Fecha Vencimiento registro:</strong> {viewingProduct.fecha_vencimiento}</p>
+                            <p><strong>Registro Sanitario:</strong> {viewingProduct.registro_sanitario}</p>
+                            <p><strong>Código:</strong> {viewingProduct.codigo}</p>
+                            <p><strong>DAVID:</strong> {viewingProduct.david}</p>
+                        </>
+                    )}
                 </Modal.Body>
             </Modal>
 
-            {/* ✅ MODAL Editar/Crear (igual que antes) */}
+            {/* ✅ MODAL Editar/Crear COMPLETO */}
             <Modal show={showEditModal} onHide={() => !loading && setShowEditModal(false)} centered size="lg">
                 <Modal.Header closeButton>
                     <Modal.Title>{isNewProduct ? 'Crear Producto' : `Editar Producto: ${editingProduct?.nombre}`}</Modal.Title>
@@ -279,7 +295,84 @@ const Consulta = () => {
                                 </Form.Group>
                             </Col>
                         </Row>
-                        {/* resto igual */}
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>David</Form.Label>
+                                    <Form.Control type="text" name="david" value={formData.david || ''} onChange={handleInputChange} />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Categoría</Form.Label>
+                                    <Form.Control type="text" name="categoria" value={formData.categoria || ''} onChange={handleInputChange} />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Laboratorio</Form.Label>
+                                    <Form.Control type="text" name="laboratorio" value={formData.laboratorio || ''} onChange={handleInputChange} />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Registro Sanitario</Form.Label>
+                                    <Form.Control type="text" name="registro_sanitario" value={formData.registro_sanitario || ''} onChange={handleInputChange} />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Fecha de Vencimiento</Form.Label>
+                                    <Form.Control type="date" name="fecha_vencimiento" value={formData.fecha_vencimiento || ''} onChange={handleInputChange} />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Estado Registro</Form.Label>
+                                    <Form.Control type="text" name="estado_registro" value={formData.estado_registro || ''} onChange={handleInputChange} />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Estado Producto</Form.Label>
+                                    <Form.Control type="text" name="estado_producto" value={formData.estado_producto || ''} onChange={handleInputChange} />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Precio Público</Form.Label>
+                                    <Form.Control type="number" name="precio_publico" value={formData.precio_publico || ''} onChange={handleInputChange} />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Precio Médico</Form.Label>
+                                    <Form.Control type="number" name="precio_medico" value={formData.precio_medico || ''} onChange={handleInputChange} />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>IVA</Form.Label>
+                                    <Form.Control type="text" name="iva" value={formData.iva || ''} onChange={handleInputChange} />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <Col md={12}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Fórmula Médica</Form.Label>
+                                    <Form.Control type="text" name="formula_medica" value={formData.formula_medica || ''} onChange={handleInputChange} />
+                                </Form.Group>
+                            </Col>
+                        </Row>
                     </Form>
                 </Modal.Body>
                 <Modal.Footer className="d-flex flex-column flex-md-row gap-2">
@@ -290,7 +383,6 @@ const Consulta = () => {
                 </Modal.Footer>
             </Modal>
 
-            {/* FOOTER */}
             <footer className="consulta-footer text-center py-3">
                 © 2025 Farmacia Homeopática - Todos los derechos reservados
             </footer>

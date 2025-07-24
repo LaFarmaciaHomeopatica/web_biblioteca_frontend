@@ -14,7 +14,7 @@ body {
 
 /* HEADER */
 .clientedoc-header {
-    background: #0857b3 !important;
+    background: #00A3E0 !important;
     padding: 0.5rem 1rem;
     width: 100vw;
     position: relative;
@@ -25,7 +25,7 @@ body {
 }
 
 .clientedoc-title {
-    color: white;
+    color: rgb(0, 0, 0);
     font-weight: bold;
     font-size: 1.2rem;
 }

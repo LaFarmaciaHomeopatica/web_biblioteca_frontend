@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
-    Container, Navbar, Button, Row, Col,
-    Card, Modal, Form, ProgressBar, Alert
+    Container, Navbar, Button, Card, Modal, Form, ProgressBar, Alert
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/documentos.css';
@@ -32,11 +31,10 @@ const Documentos = () => {
         return token ? { Authorization: `Bearer ${token}` } : null;
     };
 
-    const handlelogout = () => {
+    const handleLogout = () => {
         navigate('/admin');
     };
 
-    /** ✅ Fetch documentos con búsqueda */
     const fetchDocumentos = useCallback(async (page = 1, term = '') => {
         if (cancelTokenSourceRef.current) {
             cancelTokenSourceRef.current.cancel('Cancelado por nueva solicitud');
@@ -54,7 +52,7 @@ const Documentos = () => {
                 headers,
                 params: {
                     page,
-                    search: term // ✅ Parámetro enviado al backend
+                    search: term
                 },
                 cancelToken: cancelTokenSourceRef.current.token
             });
@@ -71,7 +69,6 @@ const Documentos = () => {
         }
     }, [navigate]);
 
-    /** ✅ Llamada inicial y cuando cambia la página */
     useEffect(() => {
         fetchDocumentos(currentPage, searchTerm);
         return () => {
@@ -81,12 +78,10 @@ const Documentos = () => {
         };
     }, [currentPage, searchTerm, fetchDocumentos]);
 
-    /** ✅ Búsqueda con debounce */
     useEffect(() => {
         const delayDebounce = setTimeout(() => {
-            fetchDocumentos(1, searchTerm); // ✅ Reinicia en la página 1 al buscar
+            fetchDocumentos(1, searchTerm);
         }, 500);
-
         return () => clearTimeout(delayDebounce);
     }, [searchTerm, fetchDocumentos]);
 
@@ -124,10 +119,15 @@ const Documentos = () => {
                 }
             );
 
-            setSuccessMessage(`${selectedFiles.length} documentos subidos correctamente`);
+            setSuccessMessage(`${selectedFiles.length} documento(s) subido(s) correctamente`);
             fetchDocumentos(currentPage, searchTerm);
             setSelectedFiles([]);
             setShowModal(false);
+
+            setTimeout(() => {
+                setSuccessMessage(null);
+                setUploadProgress(0);
+            }, 3000);
         } catch (error) {
             setError(error.response?.data?.message || 'Error al subir los documentos');
         } finally {
@@ -149,6 +149,8 @@ const Documentos = () => {
 
             setSuccessMessage('Documento eliminado correctamente');
             fetchDocumentos(currentPage, searchTerm);
+
+            setTimeout(() => setSuccessMessage(null), 3000);
         } catch (error) {
             setError('Error al eliminar el documento');
         } finally {
@@ -180,6 +182,8 @@ const Documentos = () => {
             setSuccessMessage('Nombre del documento actualizado correctamente');
             fetchDocumentos(currentPage, searchTerm);
             setShowEditModal(false);
+
+            setTimeout(() => setSuccessMessage(null), 3000);
         } catch (error) {
             setError(error.response?.data?.message || 'Error al actualizar el documento');
         } finally {
@@ -187,7 +191,6 @@ const Documentos = () => {
         }
     };
 
-    /** ✅ Paginación */
     const handlePageChange = (newPage) => {
         if (!loading && newPage >= 1 && newPage <= lastPage) {
             setCurrentPage(newPage);
@@ -195,191 +198,132 @@ const Documentos = () => {
     };
 
     return (
-        <div className="documentos-layout">
+        <div className="documentos-page">
+            {/* HEADER */}
             <Navbar expand="lg" className="documentos-header">
                 <Container fluid>
                     <Navbar.Brand className="d-flex align-items-center">
                         <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
                         <span className="documentos-title">BIBLIOTECALFH</span>
                     </Navbar.Brand>
-                    <Button onClick={handlelogout} className="logout-button">
+                    <Button onClick={handleLogout} className="logout-button">
                         <i className="bi bi-arrow-left-circle me-1"></i> Volver
                     </Button>
                 </Container>
             </Navbar>
 
+            {/* CONTENIDO */}
             <Container fluid className="documentos-content">
-                <Row className="mt-4">
-                    <Col>
-                        <Card className="documentos-card">
-                            <Card.Body>
-                                <h4 className="mb-4">Documentos PDF</h4>
+                <Card className="documentos-card">
+                    <Card.Body>
+                        <h2 className="documentos-title-main mb-4 text-center text-md-start">
+                            Gestión de Documentos
+                        </h2>
 
-                                <div className="documentos-toolbar mb-3">
-                                    <Button
-                                        onClick={() => setShowModal(true)}
-                                        disabled={loading}
-                                        className="btn-cargar-documentos"
-                                    >
-                                        <i className="bi bi-upload me-2"></i> Cargar Documentos
-                                    </Button>
+                        <div className="d-flex flex-column flex-md-row gap-2 mb-4">
+                            <Button onClick={() => setShowModal(true)} disabled={loading}>
+                                <i className="bi bi-upload me-2"></i> Cargar Documentos
+                            </Button>
+                            <Form.Control
+                                type="text"
+                                placeholder="Buscar por nombre"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
 
-                                    <Form.Control
-                                        type="text"
-                                        placeholder="Buscar por nombre"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                    />
-                                </div>
+                        {loading && <div className="text-center mb-3">Cargando documentos...</div>}
+                        {error && <Alert variant="danger">{error}</Alert>}
+                        {successMessage && <Alert variant="success">{successMessage}</Alert>}
 
-                                {loading && !showModal && !showEditModal && <div className="text-center mb-3">Cargando...</div>}
-                                {error && <Alert variant="danger">{error}</Alert>}
-                                {successMessage && <Alert variant="success">{successMessage}</Alert>}
-
-                                {/* CARDS */}
-                                <Row>
-                                    {documentos.length > 0 ? (
-                                        documentos.map((doc) => (
-                                            <Col xs={12} md={6} lg={4} key={doc.id} className="mb-4">
-                                                <Card className="document-card">
-                                                    <Card.Body>
-                                                        <h5>{doc.nombre}</h5>
-                                                        <p className="mb-2">Fecha de subida: <strong>{new Date(doc.fecha_subida).toLocaleDateString('es-ES')}</strong></p>
-                                                        <div className="d-flex flex-wrap gap-2">
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => handleEditClick(doc)}
-                                                                disabled={loading}
-                                                                variant="warning"
-                                                            >
-                                                                <i className="bi bi-pencil me-1"></i> Editar
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => window.open(`http://localhost:8000/storage/${doc.ruta}`, '_blank')}
-                                                                disabled={loading}
-                                                                variant="primary"
-                                                            >
-                                                                <i className="bi bi-eye me-1"></i> Ver
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => handleDeleteDocument(doc.id)}
-                                                                disabled={loading}
-                                                                variant="danger"
-                                                            >
-                                                                <i className="bi bi-trash me-1"></i> Eliminar
-                                                            </Button>
-                                                        </div>
-                                                    </Card.Body>
-                                                </Card>
-                                            </Col>
-                                        ))
-                                    ) : (
-                                        <div className="text-center mt-3">No se encontraron documentos</div>
-                                    )}
-                                </Row>
-
-                                {lastPage > 1 && (
-                                    <div className="pagination-wrapper mt-4">
-                                        <button
-                                            className="pagination-btn"
-                                            onClick={() => handlePageChange(currentPage - 1)}
-                                            disabled={currentPage === 1 || loading}
-                                        >
-                                            <i className="bi bi-chevron-left"></i>
-                                        </button>
-
-                                        <span className="pagination-info">
-                                            {currentPage} / {lastPage}
-                                        </span>
-
-                                        <button
-                                            className="pagination-btn"
-                                            onClick={() => handlePageChange(currentPage + 1)}
-                                            disabled={currentPage === lastPage || loading}
-                                        >
-                                            <i className="bi bi-chevron-right"></i>
-                                        </button>
+                        <div className="document-list">
+                            {documentos.length > 0 ? (
+                                documentos.map((doc) => (
+                                    <div key={doc.id} className="document-card">
+                                        <div className="document-info">
+                                            <p><strong>{doc.nombre}</strong></p>
+                                            <p>Fecha: {new Date(doc.fecha_subida).toLocaleDateString('es-ES')}</p>
+                                        </div>
+                                        <div className="card-actions">
+                                            <Button size="sm" variant="warning" onClick={() => handleEditClick(doc)}>Editar</Button>
+                                            <Button size="sm" variant="primary" onClick={() => window.open(`http://localhost:8000/storage/${doc.ruta}`, '_blank')}>Ver</Button>
+                                            <Button size="sm" variant="danger" onClick={() => handleDeleteDocument(doc.id)}>Eliminar</Button>
+                                        </div>
                                     </div>
-                                )}
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                </Row>
+                                ))
+                            ) : (
+                                <p className="text-center">No se encontraron documentos</p>
+                            )}
+                        </div>
+
+                        {lastPage > 1 && (
+                            <div className="pagination-wrapper mt-4 d-flex justify-content-center gap-2">
+                                <button
+                                    className="pagination-btn"
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1 || loading}
+                                >
+                                    <i className="bi bi-chevron-left"></i>
+                                </button>
+                                <span className="pagination-info">{currentPage} / {lastPage}</span>
+                                <button
+                                    className="pagination-btn"
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === lastPage || loading}
+                                >
+                                    <i className="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        )}
+                    </Card.Body>
+                </Card>
             </Container>
 
-            {/* Modal Cargar Documentos */}
-            <Modal show={showModal} onHide={() => setShowModal(false)}>
+            {/* FOOTER */}
+            <footer className="documentos-footer text-center py-3">
+                © 2025 Farmacia Homeopática - Todos los derechos reservados
+            </footer>
+
+            {/* MODAL SUBIR */}
+            <Modal show={showModal} onHide={() => setShowModal(false)} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Cargar Documentos</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <Form.Group>
                         <Form.Label>Seleccionar archivos PDF</Form.Label>
-                        <Form.Control
-                            type="file"
-                            multiple
-                            accept=".pdf"
-                            onChange={handleFileChange}
-                        />
+                        <Form.Control type="file" multiple accept=".pdf" onChange={handleFileChange} />
                         {uploadProgress > 0 && (
-                            <ProgressBar
-                                now={uploadProgress}
-                                label={`${uploadProgress}%`}
-                                className="mt-3"
-                            />
+                            <ProgressBar now={uploadProgress} label={`${uploadProgress}%`} className="mt-3" />
                         )}
                     </Form.Group>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowModal(false)}>
-                        Cancelar
-                    </Button>
-                    <Button
-                        variant="primary"
-                        onClick={handleUpload}
-                        disabled={loading || selectedFiles.length === 0}
-                    >
+                    <Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>
+                    <Button variant="primary" onClick={handleUpload} disabled={loading || selectedFiles.length === 0}>
                         {loading ? 'Subiendo...' : 'Subir Documentos'}
                     </Button>
                 </Modal.Footer>
             </Modal>
 
-            {/* Modal Editar Documento */}
-            <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
+            {/* MODAL EDITAR */}
+            <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Editar Documento</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <Form.Group>
                         <Form.Label>Nuevo nombre</Form.Label>
-                        <Form.Control
-                            type="text"
-                            value={newDocName}
-                            onChange={(e) => setNewDocName(e.target.value)}
-                        />
+                        <Form.Control type="text" value={newDocName} onChange={(e) => setNewDocName(e.target.value)} />
                     </Form.Group>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowEditModal(false)}>
-                        Cancelar
-                    </Button>
+                    <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancelar</Button>
                     <Button variant="primary" onClick={handleSaveEdit} disabled={loading}>
                         {loading ? 'Guardando...' : 'Guardar Cambios'}
                     </Button>
                 </Modal.Footer>
             </Modal>
-
-            <footer className="documentos-footer">
-                <Container fluid>
-                    <Row className="py-3">
-                        <Col md={12} className="text-center">
-                            <p className="mb-0">© 2025 Farmacia Homeopática - Todos los derechos reservados</p>
-                        </Col>
-                    </Row>
-                </Container>
-            </footer>
         </div>
     );
 };

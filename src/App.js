@@ -10,6 +10,8 @@ import Documentos from './components/documentos.jsx';
 import Clientedoc from './components/clientedoc.jsx'; 
 import Vademecum from './components/vademecum.jsx'; 
 import Capacitacion from './components/capacitacion.jsx';
+import Laboratorios from './components/laboratorios.jsx';
+
 
 const App = () => {
   return (
@@ -23,6 +25,7 @@ const App = () => {
         <Route path="/documentos" element={<Documentos />} />
         <Route path="/clientedoc" element={<Clientedoc />} />
         <Route path="/vademecum" element={<Vademecum />} />
+        <Route path="/laboratorios" element={<Laboratorios />} /> 
           <Route path="/capacitacion" element={<Capacitacion />} /> 
       </Routes>
     </BrowserRouter>

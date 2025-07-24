@@ -26,15 +26,20 @@ body {
 
 /* HEADER */
 .usuarios-header {
-  background: #0857b3 !important;
-  padding: 1rem 0;
-  box-shadow: 0 2px 10px rgba(247, 2, 2, 0.1);
-  width: 100vw;
-  position: relative;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
+    background: #00A3E0 !important;
+    padding: 0.8rem 1rem;
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+}
+
+.usuarios-title {
+    color: rgb(0, 0, 0);
+    font-weight: bold;
+    font-size: 1.2rem;
 }
 
 .usuarios-title {
@@ -78,7 +83,7 @@ body {
 
 /* Botones */
 .btn {
-  background: #0857b3 !important;
+  background: #006B9A !important;
   border: none !important;
   border-radius: 9px !important;
   padding: 10px 50px !important;

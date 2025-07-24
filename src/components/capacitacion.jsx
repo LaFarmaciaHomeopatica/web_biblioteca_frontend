@@ -33,7 +33,7 @@ const Capacitacion = () => {
                 return;
             }
 
-            const response = await axios.get( `http://localhost:8000/api/documentos?page=${page}&search=capacitacion`, {
+            const response = await axios.get(`http://localhost:8000/api/documentos?page=${page}&search=capacitacion`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -58,6 +58,7 @@ const Capacitacion = () => {
 
     const handleGoToVademecum = () => navigate('/vademecum');
     const handleGoToDocumentos = () => navigate('/clientedoc');
+    const handleGoToLaboratorios = () => navigate('/laboratorios');
 
     return (
         <div className="capacitacion-layout">
@@ -72,6 +73,10 @@ const Capacitacion = () => {
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Nav className="ms-auto d-flex flex-column flex-lg-row gap-2 mt-3 mt-lg-0">
+
+                            <Button onClick={handleGoToLaboratorios}>
+                                <i className="bi bi-droplet me-1"></i> Laboratorios
+                            </Button>
                             <Button onClick={handleGoToVademecum}>
                                 <i className="bi bi-book me-1"></i> Vademécum
                             </Button>

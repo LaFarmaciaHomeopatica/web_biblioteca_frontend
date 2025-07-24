@@ -57,6 +57,7 @@ const Vademecum = () => {
 
     const handleGoToCapacitacion = () => navigate('/capacitacion');
     const handleGoToDocumentos = () => navigate('/clientedoc');
+    const handleGoToLaboratorios = () => navigate('/laboratorios');
 
     return (
         <div className="vademecum-layout">
@@ -71,6 +72,9 @@ const Vademecum = () => {
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Nav className="ms-auto d-flex flex-column flex-lg-row gap-2 mt-3 mt-lg-0">
+                            <Button onClick={handleGoToLaboratorios}>
+                                <i className="bi bi-droplet me-1"></i> Laboratorios
+                            </Button>
                             <Button onClick={handleGoToCapacitacion}>
                                 <i className="bi bi-mortarboard me-1"></i> Capacitación
                             </Button>

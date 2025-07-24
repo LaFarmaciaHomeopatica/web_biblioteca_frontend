@@ -64,6 +64,7 @@ const Cliente = () => {
     const handleGoToDocs = () => navigate('/clientedoc');
     const handleGoToVademecum = () => navigate('/vademecum');
     const handleGoToCapacitacion = () => navigate('/capacitacion');
+    const handleGoToLaboratorios = () => navigate('/laboratorios');
 
     return (
         <div className="cliente-layout">
@@ -77,6 +78,9 @@ const Cliente = () => {
                     <Navbar.Toggle aria-controls="navbarResponsive" />
                     <Navbar.Collapse id="navbarResponsive" className="justify-content-end">
                         <Nav className="d-flex flex-column flex-lg-row gap-2">
+                             <Button onClick={handleGoToLaboratorios}>
+                                <i className="bi bi-droplet me-1"></i> Laboratorios
+                            </Button>
                             <Button onClick={handleGoToVademecum}>
                                 <i className="bi bi-book me-1"></i> Vademécum
                             </Button>
@@ -196,17 +200,22 @@ const Cliente = () => {
                 show={showModal}
                 onHide={handleCloseModal}
                 centered
-                dialogClassName={selectedProducto?.estado_producto?.toLowerCase() === 'inactivo' ? 'inactive-modal' : ''}
             >
                 <Modal.Header
                     closeButton
-                    className={selectedProducto?.estado_producto?.toLowerCase() === 'inactivo' ? 'inactive-header' : ''}
+                    style={{
+                        backgroundColor: selectedProducto?.estado_producto?.toLowerCase() === 'inactivo' ? '#dc3545' : '#0857b3',
+                        color: '#fff'
+                    }}
                 >
-                    <Modal.Title>Detalles del Producto</Modal.Title>
+                    <Modal.Title>
+                        Detalles del Producto
+                        {selectedProducto?.estado_producto?.toLowerCase() === 'inactivo' && (
+                            <span className="badge bg-light text-dark ms-2">INACTIVO</span>
+                        )}
+                    </Modal.Title>
                 </Modal.Header>
-                <Modal.Body
-                    className={selectedProducto?.estado_producto?.toLowerCase() === 'inactivo' ? 'inactive-modal-body' : ''}
-                >
+                <Modal.Body>
                     {selectedProducto && (
                         <div>
                             <p><strong>Nombre:</strong> {selectedProducto.nombre}</p>
@@ -219,7 +228,7 @@ const Cliente = () => {
                             <p><strong>Categoría:</strong> {selectedProducto.categoria}</p>
                             <p><strong>Estado Registro:</strong> {selectedProducto.estado_registro}</p>
                             <p><strong>Fecha Vencimiento registro:</strong> {selectedProducto.fecha_vencimiento}</p>
-                            <p><strong>Registro Sanitario:</strong> {selectedProducto.registro_sanitario}</p> 
+                            <p><strong>Registro Sanitario:</strong> {selectedProducto.registro_sanitario}</p>
                             <p><strong>Código:</strong> {selectedProducto.codigo}</p>
                             <p><strong>DAVID:</strong> {selectedProducto.david}</p>
                         </div>
