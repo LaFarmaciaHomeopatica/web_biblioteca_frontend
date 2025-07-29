@@ -16,7 +16,7 @@ body {
     flex-direction: column;
 }
 
-/* HEADER */
+/* HEADER (NO SE TOCA) */
 .documentos-header {
     background: #00A3E0 !important;
     padding: 0.5rem 1rem;
@@ -32,12 +32,12 @@ body {
 }
 
 .documentos-title {
-    color: rgb(0, 0, 0);
+    color: rgb(255, 255, 255);
     font-weight: bold;
     font-size: 1.2rem;
 }
 
-/* Botón volver */
+/* Botón volver (NO SE TOCA) */
 .logout-button {
     background: #6000f900 !important;
     color: #e8e8e8 !important;
@@ -120,7 +120,7 @@ body {
     font-weight: 500;
 }
 
-/* ✅ Botones de acción */
+/* ✅ Botones de acción del contenido */
 .card-actions {
     margin-top: auto;
     display: flex;
@@ -129,8 +129,21 @@ body {
     justify-content: flex-end;
 }
 
-.card-actions button {
+.card-actions button
+ {
     font-size: 0.85rem;
+    background: #006B9A !important; /* ✅ COLOR NUEVO */
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+}
+
+.card-actions button:hover {
+    background: #0088C2 !important; /* ✅ Hover más claro */
+    transform: translateY(-2px);
 }
 
 /* ✅ Responsive GRID */
@@ -170,12 +183,12 @@ body {
 }
 
 .pagination-btn:hover:not(:disabled) {
-    background-color: #0857b3;
+    background-color: #006B9A;
     color: #fff;
 }
 
 .pagination-info {
-    background-color: #0857b3;
+    background-color: #006B9A;
     color: #fff;
     font-weight: bold;
     padding: 6px 12px;

@@ -7,7 +7,7 @@ import '../assets/laboratorios.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
 
-// ✅ Importamos las imágenes que están dentro de src/assets/img_lab
+// ✅ Importamos las imágenes
 import AROMATMA from '../assets/img_lab/AROMATMA.PNG';
 import BIO_ESSENS from '../assets/img_lab/BIO_ESSENS.PNG';
 import BIOSA from '../assets/img_lab/biosa.png';
@@ -61,17 +61,15 @@ import ARUM from '../assets/img_lab/ARUM.jpeg';
 import MUNAY from '../assets/img_lab/MUNAY.jpeg';
 import NUTRAHAN from '../assets/img_lab/NUTRAHAN.jpeg';
 import BOTANICA from '../assets/img_lab/BOTANICA.jpeg';
+import GOING from '../assets/img_lab/GOING.jpeg';
 
-
-
-
-// ✅ Array con imágenes
+// ✅ Array con imágenes y nombres
 const laboratorios = [
     { nombre: 'Bio Essens', imagen: BIO_ESSENS },
     { nombre: 'AROMATMA', imagen: AROMATMA },
     { nombre: 'BIOSA', imagen: BIOSA },
     { nombre: 'BOIRON', imagen: BOIRON },
-    { nombre: 'CARLSON', imagen: CARLSON},
+    { nombre: 'CARLSON', imagen: CARLSON },
     { nombre: 'CATALYSIS', imagen: CATALYSIS },
     { nombre: 'COLVENFAR', imagen: COLVENFAR },
     { nombre: 'ECOTU', imagen: ECOTU },
@@ -93,7 +91,7 @@ const laboratorios = [
     { nombre: 'LEBENPHARMA', imagen: LEBENPHARMA },
     { nombre: 'LEDMAR', imagen: LEDMAR },
     { nombre: 'LHA', imagen: LHA },
-    { nombre: 'MAGNA', imagen: MAGNA },
+    { nombre: 'MAGNA TRADE', imagen: MAGNA },
     { nombre: 'MAGNOFARMA', imagen: MAGNOFARMA },
     { nombre: 'MARNYS', imagen: MARNYS },
     { nombre: 'MINERALIN', imagen: MINERALIN },
@@ -120,20 +118,24 @@ const laboratorios = [
     { nombre: 'NUTRAHAN', imagen: NUTRAHAN },
     { nombre: 'MUNAY', imagen: MUNAY },
     { nombre: 'BOTANICA', imagen: BOTANICA },
-    // ✅ Agrega los demás siguiendo esta estructura
+    { nombre: 'GOING', imagen: GOING },
 ];
 
 const Laboratorios = () => {
     const navigate = useNavigate();
 
-    const handleGoToDocs = () => navigate('/clientedoc');
+    const handleLaboratorioClick = (nombre) => {
+        navigate(`/productoporlaboratorio/${encodeURIComponent(nombre)}`);
+    };
+
+    // ✅ Botones de navegación
     const handleGoToVademecum = () => navigate('/vademecum');
     const handleGoToCapacitacion = () => navigate('/capacitacion');
-    const handleGoToProductos = () => navigate('/cliente');
+    const handleGoToDocs = () => navigate('/clientedoc');
 
     return (
         <div className="laboratorios-layout">
-            {/* HEADER */}
+            {/* ✅ HEADER con botones */}
             <Navbar expand="lg" className="cliente-header" variant="dark">
                 <Container fluid>
                     <Navbar.Brand className="d-flex align-items-center">
@@ -152,21 +154,25 @@ const Laboratorios = () => {
                             <Button onClick={handleGoToDocs}>
                                 <i className="bi bi-file-earmark-text me-1"></i> Documentos
                             </Button>
-                            <Button onClick={handleGoToProductos} className="logout-button">
-                                <i className="bi bi-box-arrow-right me-1"></i> Productos
+                            <Button onClick={() => navigate('/cliente')} variant="secondary">
+                                <i className="bi bi-arrow-left-circle me-1"></i> Productos
                             </Button>
                         </Nav>
                     </Navbar.Collapse>
                 </Container>
             </Navbar>
 
-            {/* CONTENIDO */}
+            {/* ✅ CONTENIDO */}
             <Container fluid className="laboratorios-content px-3 px-md-5">
                 <h2 className="laboratorios-title text-center my-4">Laboratorios</h2>
                 <Row className="g-4">
                     {laboratorios.map((lab, index) => (
                         <Col key={index} xs={6} sm={4} md={3} lg={2}>
-                            <Card className="laboratorio-card h-100 shadow-sm">
+                            <Card
+                                onClick={() => handleLaboratorioClick(lab.nombre)}
+                                className="laboratorio-card h-100 shadow-sm"
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <Card.Img
                                     variant="top"
                                     src={lab.imagen}
@@ -182,17 +188,11 @@ const Laboratorios = () => {
                 </Row>
             </Container>
 
-            {/* FOOTER */}
-            <footer className="cliente-footer">
-                <Container fluid>
-                    <Row className="py-3">
-                        <Col md={12} className="text-center">
-                            <p className="mb-0">© 2025 Farmacia Homeopática - Todos los derechos reservados</p>
-                        </Col>
-                    </Row>
-                </Container>
+            <footer className="documentos-footer text-center py-3">
+                © 2025 Farmacia Homeopática - Más alternativas, más servicio.
             </footer>
         </div>
+
     );
 };
 

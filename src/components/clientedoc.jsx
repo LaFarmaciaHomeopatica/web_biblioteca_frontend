@@ -58,6 +58,7 @@ const Clientedoc = () => {
     const handleGoToVademecum = () => navigate('/vademecum');
     const handleGoToCapacitacion = () => navigate('/capacitacion');
     const handleBack = () => navigate('/cliente');
+    const handleGoToLaboratorios = () => navigate('/laboratorios');
 
     return (
         <div className="clientedoc-layout">
@@ -72,6 +73,9 @@ const Clientedoc = () => {
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Nav className="ms-auto d-flex flex-column flex-lg-row gap-2 mt-3 mt-lg-0">
+                            <Button onClick={handleGoToLaboratorios}>
+                                <i className="bi bi-droplet me-1"></i> Laboratorios
+                            </Button>
                             <Button onClick={handleGoToVademecum}>
                                 <i className="bi bi-book me-1"></i> Vademécum
                             </Button>
@@ -171,7 +175,7 @@ const Clientedoc = () => {
                 <Container fluid>
                     <Row className="py-3">
                         <Col md={12} className="text-center">
-                            <p className="mb-0">© 2025 Farmacia Homeopática - Todos los derechos reservados</p>
+                            <p className="mb-0">© 2025 Farmacia Homeopática - Más alternativas, más servicio.</p>
                         </Col>
                     </Row>
                 </Container>

@@ -164,7 +164,7 @@ const Capacitacion = () => {
                 <Container fluid>
                     <Row className="py-3">
                         <Col md={12} className="text-center">
-                            <p className="mb-0">© 2025 Farmacia Homeopática - Todos los derechos reservados</p>
+                            <p className="mb-0">© 2025 Farmacia Homeopática - Más alternativas, más servicio.</p>
                         </Col>
                     </Row>
                 </Container>

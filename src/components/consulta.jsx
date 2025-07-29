@@ -4,6 +4,7 @@ import {
     Container, Navbar, Form, FormControl, Button, Row, Col,
     Card, Modal
 } from 'react-bootstrap';
+import * as XLSX from 'xlsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/consulta.css';
 import { useNavigate } from 'react-router-dom';
@@ -26,6 +27,10 @@ const Consulta = () => {
     const [showViewModal, setShowViewModal] = useState(false);
     const [formData, setFormData] = useState({});
     const [isNewProduct, setIsNewProduct] = useState(false);
+    const [showInstructions, setShowInstructions] = useState(false);
+
+
+
 
     // ✅ Paginación
     const [currentPage, setCurrentPage] = useState(1);
@@ -133,7 +138,78 @@ const Consulta = () => {
         }
     };
 
-    // ✅ Ocultar mensaje de éxito después de 3 segundos
+    // ✅ Exportar Excel
+    const handleExportExcel = async () => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axios.get('http://localhost:8000/api/productos-all', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
+                },
+                params: {
+                    search: searchTerm,
+                    filterBy: filterBy,
+                },
+            });
+
+            const allProductos = response.data;
+
+            const data = allProductos.map(producto => ({
+                Código: producto.codigo,
+                Nombre: producto.nombre,
+                Precio_Público: producto.precio_publico,
+                Precio_Médico: producto.precio_medico,
+                Laboratorio: producto.laboratorio,
+                Categoría: producto.categoria,
+                Estado_Producto: producto.estado_producto,
+                IVA: producto.iva,
+                Fórmula_Médica: producto.formula_medica,
+                Registro_Sanitario: producto.registro_sanitario,
+                Fecha_Vencimiento: producto.fecha_vencimiento,
+                Estado_Registro: producto.estado_registro,
+                DAVID: producto.david
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+            XLSX.writeFile(wb, 'productos.xlsx');
+
+        } catch (error) {
+            console.error('Error al exportar Excel:', error);
+            setError('Error al exportar los productos.');
+        }
+    };
+
+
+    // ✅ Importar Excel
+    const handleImportExcel = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file); // clave "file" debe coincidir con el backend
+
+        try {
+            const token = localStorage.getItem('authToken');
+            await axios.post('http://localhost:8000/api/productos/import-excel', formData, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            setSuccessMessage('Productos importados/actualizados correctamente desde Excel');
+            fetchProductos(currentPage); // recarga la tabla actual
+        } catch (error) {
+            if (error.response && error.response.data && error.response.data.message) {
+                setError(`Error al importar: ${error.response.data.message}`);
+            } else {
+                setError('Error al actualizar productos desde Excel');
+            }
+        }
+    };
     useEffect(() => {
         if (successMessage) {
             const timer = setTimeout(() => setSuccessMessage(null), 3000);
@@ -165,9 +241,21 @@ const Consulta = () => {
                         </h2>
 
                         <div className="d-flex flex-column flex-md-row gap-2 mb-4">
-                            <Button onClick={handleCreateClick} disabled={loading}>
-                                + Crear Producto
+                            <Button variant="info" onClick={() => setShowInstructions(true)}>
+                                Instrucciones
                             </Button>
+                            <Button onClick={handleCreateClick} disabled={loading}>+ Crear Producto</Button>
+                            <Button variant="success" onClick={handleExportExcel}>Exportar Excel</Button>
+                            <Button variant="warning" onClick={() => document.getElementById('fileInputExcel').click()}>
+                                Importar Excel
+                            </Button>
+                            <input
+                                id="fileInputExcel"
+                                type="file"
+                                accept=".xlsx, .xls"
+                                style={{ display: 'none' }}
+                                onChange={handleImportExcel}
+                            />
                             <Form className="d-flex flex-column flex-md-row gap-2 flex-grow-1">
                                 <FormControl
                                     type="text"
@@ -383,9 +471,50 @@ const Consulta = () => {
                 </Modal.Footer>
             </Modal>
 
+
+            {/* ✅ Modal de Instrucciones */}
+            <Modal show={showInstructions} onHide={() => setShowInstructions(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Guía para Importar Productos</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Card className="shadow-sm border-0">
+                        <Card.Body>
+                            <h5 className="mb-3 text-primary">Pasos para cargar productos desde Excel:</h5>
+                            <ul>
+                                <li className="text-danger fw-bold">
+                                    ⚠️ Asegúrate de que el archivo esté en formato <strong>.xlsx</strong> y <strong><u>descarga la base de datos antes de hacer cualquier modificación</u></strong>.
+                                </li>
+                                <li>El nombre de las columnas debe coincidir con los campos del sistema.</li>
+                                <li>Revisa que no haya celdas vacías en campos obligatorios como <strong>código</strong> o <strong>nombre</strong>.</li>
+                                <li>Haz clic en <strong>"Importar Excel"</strong> para seleccionar el archivo.</li>
+                                <li>Luego espera el mensaje de confirmación.</li>
+                                <li>Al momento de importar el archivo, veas errores si hay codigos repetidos o si algunos campos no están completos.</li>
+                            </ul>
+                            <Button
+                                as="a"
+                                href="http://localhost:8000/plantillas/plantilla_productos.xlsx"
+                                download
+                                className="btn btn-success"
+                            >
+                                Descargar plantilla
+                            </Button>
+                            <hr />
+                            <p className="mb-0 text-muted"><i className="bi bi-info-circle me-2"></i>Si hay errores en el archivo, no se importará.</p>
+                        </Card.Body>
+                    </Card>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowInstructions(false)}>
+                        Cerrar
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
             <footer className="consulta-footer text-center py-3">
-                © 2025 Farmacia Homeopática - Todos los derechos reservados
+                © 2025 Farmacia Homeopática - Más alternativas, más servicio.
             </footer>
+
         </div>
     );
 };

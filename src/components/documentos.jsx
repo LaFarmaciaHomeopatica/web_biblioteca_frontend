@@ -23,6 +23,7 @@ const Documentos = () => {
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [showInstructionsModal, setShowInstructionsModal] = useState(false);
 
     const cancelTokenSourceRef = useRef(null);
 
@@ -221,6 +222,9 @@ const Documentos = () => {
                         </h2>
 
                         <div className="d-flex flex-column flex-md-row gap-2 mb-4">
+                            <Button variant="info" onClick={() => setShowInstructionsModal(true)}>
+                                <i className="bi bi-info-circle me-2"></i> Instrucciones
+                            </Button>
                             <Button onClick={() => setShowModal(true)} disabled={loading}>
                                 <i className="bi bi-upload me-2"></i> Cargar Documentos
                             </Button>
@@ -279,10 +283,7 @@ const Documentos = () => {
                 </Card>
             </Container>
 
-            {/* FOOTER */}
-            <footer className="documentos-footer text-center py-3">
-                © 2025 Farmacia Homeopática - Todos los derechos reservados
-            </footer>
+
 
             {/* MODAL SUBIR */}
             <Modal show={showModal} onHide={() => setShowModal(false)} centered>
@@ -317,6 +318,7 @@ const Documentos = () => {
                         <Form.Control type="text" value={newDocName} onChange={(e) => setNewDocName(e.target.value)} />
                     </Form.Group>
                 </Modal.Body>
+
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancelar</Button>
                     <Button variant="primary" onClick={handleSaveEdit} disabled={loading}>
@@ -324,6 +326,41 @@ const Documentos = () => {
                     </Button>
                 </Modal.Footer>
             </Modal>
+
+            {/* MODAL INSTRUCCIONES */}
+            <Modal show={showInstructionsModal} onHide={() => setShowInstructionsModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Instrucciones para Cargar Documentos</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Card className="shadow-sm border-0">
+                        <Card.Body>
+                            <h5 className="mb-3 text-primary">Pasos para subir correctamente tus documentos:</h5>
+                            <ul>
+                                <li>El archivo debe estar en formato <strong>PDF</strong>.</li>
+                                <li>Asegúrate de que el nombre del archivo sea claro y representativo.</li>
+                                <li>Puedes seleccionar múltiples archivos para subir al mismo tiempo.</li>
+                                <li>No se aceptarán archivos con nombres duplicados ya cargados.</li>
+                                <li>Verifica que la conexión a internet esté activa antes de iniciar la carga.</li>
+                            </ul>
+                            <p className="text-muted mt-3">
+                                Si tienes dudas, contacta con el administrador del sistema.
+                            </p>
+                        </Card.Body>
+                    </Card>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowInstructionsModal(false)}>
+                        Cerrar
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* FOOTER */}
+            <footer className="documentos-footer text-center py-3">
+                © 2025 Farmacia Homeopática - Más alternativas, más servicio.
+            </footer>
+
         </div>
     );
 };

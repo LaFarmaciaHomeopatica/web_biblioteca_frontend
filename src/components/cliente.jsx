@@ -78,7 +78,7 @@ const Cliente = () => {
                     <Navbar.Toggle aria-controls="navbarResponsive" />
                     <Navbar.Collapse id="navbarResponsive" className="justify-content-end">
                         <Nav className="d-flex flex-column flex-lg-row gap-2">
-                             <Button onClick={handleGoToLaboratorios}>
+                            <Button onClick={handleGoToLaboratorios}>
                                 <i className="bi bi-droplet me-1"></i> Laboratorios
                             </Button>
                             <Button onClick={handleGoToVademecum}>
@@ -101,10 +101,11 @@ const Cliente = () => {
             {/* CONTENIDO */}
             <Container fluid className="cliente-content px-3 px-md-5">
                 <Row className="mt-4">
+
                     <Col>
                         <Card className="cliente-card">
                             <Card.Body>
-                                <h2 className="cliente-title-main mb-4 text-center text-md-start">
+                                <h2 className="usuarios-title-main mb-4 text-center text-md-start">
                                     Consulta de Productos
                                 </h2>
 
@@ -241,7 +242,7 @@ const Cliente = () => {
                 <Container fluid>
                     <Row className="py-3">
                         <Col md={12} className="text-center">
-                            <p className="mb-0">© 2025 Farmacia Homeopática - Todos los derechos reservados</p>
+                            <p className="mb-0">© 2025 Farmacia Homeopática - Más alternativas, más servicio.</p>
                         </Col>
                     </Row>
                 </Container>

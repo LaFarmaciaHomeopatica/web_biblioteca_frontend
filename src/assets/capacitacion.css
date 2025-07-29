@@ -25,7 +25,7 @@ body {
 }
 
 .capacitacion-title {
-    color: rgb(0, 0, 0);
+    color: rgb(255, 255, 255);
     font-weight: bold;
     font-size: 1.2rem;
 }
@@ -53,7 +53,7 @@ body {
 
 /* Footer */
 .capacitacion-footer {
-    background: #333 !important; /* ✅ Cambiado */
+    background: #333 !important;
     padding: 0.5rem 0 !important;
     color: white !important;
     width: 100vw;
@@ -67,7 +67,7 @@ body {
 /* ✅ GRID PARA DOCUMENTOS */
 .document-list {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* ✅ EXACTAMENTE 3 COLUMNAS EN ESCRITORIO */
+    grid-template-columns: repeat(3, 1fr);
     gap: 25px;
     margin-top: 20px;
 }
@@ -82,7 +82,7 @@ body {
     flex-direction: column;
     justify-content: space-between;
     gap: 10px;
-    height: 100%; /* Para uniformidad */
+    height: 100%;
 }
 
 /* ✅ INFO DOCUMENTO */
@@ -93,7 +93,7 @@ body {
     font-weight: 500;
 }
 
-/* ✅ Botones globales */
+/* ✅ Botones globales (HEADER se queda igual) */
 .btn {
     background: #00A3E0 !important;
     border: none !important;
@@ -109,7 +109,7 @@ body {
     transform: translateY(-2px);
 }
 
-/* ✅ Botón Ver */
+/* ✅ SOLO Botón Ver (dentro del contenido) */
 .card-actions {
     margin-top: auto;
     display: flex;
@@ -117,7 +117,7 @@ body {
 }
 
 .card-actions .btn-ver {
-    background: #00A3E0 !important;
+    background: #006B9A !important; /* ✅ NUEVO COLOR SOLO PARA VER */
     border: none !important;
     padding: 8px 16px !important;
     font-size: 0.9rem;
@@ -127,7 +127,7 @@ body {
 }
 
 .card-actions .btn-ver:hover {
-    background: #33BAE8 !important;
+    background: #2babe2 !important; /* ✅ Hover más oscuro */
 }
 
 /* ✅ Responsive: 2 columnas en tablets, 1 en móvil */

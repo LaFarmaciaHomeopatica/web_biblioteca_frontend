@@ -128,6 +128,9 @@ const Usuarios = () => {
             {/* CONTENIDO */}
             <Container fluid className="usuarios-content mt-4 px-3 px-md-5">
                 <Card className="usuarios-card">
+                    <h2 className="usuarios-title-main mb-4 text-center text-md-start">
+                        Gestión de Usuarios
+                    </h2>
                     <Card.Body>
                         {/* ENCABEZADO + BUSCADOR RESPONSIVE */}
                         <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-2">
@@ -296,7 +299,7 @@ const Usuarios = () => {
                 <Container fluid>
                     <Row className="py-3">
                         <Col md={12} className="text-center">
-                            <p className="mb-0">© 2025 Farmacia Homeopática - Todos los derechos reservados</p>
+                            <p className="mb-0">© 2025 Farmacia Homeopática - Más alternativas, más servicio.</p>
                         </Col>
                     </Row>
                 </Container>

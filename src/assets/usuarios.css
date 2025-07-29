@@ -24,28 +24,30 @@ body {
   width: 100%;
 }
 
-/* HEADER */
+/* HEADER (NO SE TOCA) */
 .usuarios-header {
-    background: #00A3E0 !important;
-    padding: 0.8rem 1rem;
-    width: 100vw;
-    position: relative;
-    left: 50%;
-    right: 50%;
-    margin-left: -50vw;
-    margin-right: -50vw;
-}
-
-.usuarios-title {
-    color: rgb(0, 0, 0);
-    font-weight: bold;
-    font-size: 1.2rem;
+  background: #00A3E0 !important;
+  padding: 0.8rem 1rem;
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
 }
 
 .usuarios-title {
   color: white;
   font-weight: bold;
   font-size: 1.2rem;
+}
+
+.usuarios-title-main {
+  margin-top: 8mm;
+  margin-left: 5mm;
+  font-size: 1.9rem;
+  font-weight: bold;
+  color: #333;
 }
 
 .navbar-brand {
@@ -81,35 +83,21 @@ body {
   margin-right: 0.5rem;
 }
 
-/* Botones */
-.btn {
-  background: #006B9A !important;
+/* ✅ Botones SOLO en el contenido */
+.usuarios-content .btn,
+.usuarios-content .btn-ver {
+  background: #006B9A !important; /* Color nuevo */
+  color: #fff !important;
   border: none !important;
-  border-radius: 9px !important;
-  padding: 10px 50px !important;
-  font-weight: 400 !important;
-  transition: all 0.3s !important;
-  margin-right: 8px;
-  color: white !important;
-}
-
-.btn:hover {
-  background: #82bcff !important;
-  transform: translateY(-2px);
-}
-
-/* Botón especial para acciones (Editar/Eliminar) */
-.btn-ver {
-  background: #0857b3 !important;
-  color: white !important;
   border-radius: 8px !important;
   padding: 10px 20px !important;
   font-weight: 500 !important;
-  transition: all 0.3s !important;
+  transition: all 0.3s ease !important;
 }
 
-.btn-ver:hover {
-  background: #82bcff !important;
+.usuarios-content .btn:hover,
+.usuarios-content .btn-ver:hover {
+  background: #0088C2 !important; /* Hover más claro */
   transform: translateY(-2px);
 }
 
@@ -140,7 +128,8 @@ table {
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   padding: 14px 16px;
   text-align: left;
   border-bottom: 1px solid #e0e0e0;
@@ -202,11 +191,12 @@ tr:hover {
 
 /* Responsive */
 @media (max-width: 768px) {
-  th, td {
+  th,
+  td {
     font-size: 0.85rem;
     padding: 8px 10px;
   }
-  
+
   .pagination .page-item .page-link {
     width: 36px;
     height: 36px;

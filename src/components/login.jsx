@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import '../assets/login.css';
+import '../assets/login.css'; // Mantén tu estilo base aquí
 import { useNavigate } from 'react-router-dom';
 import imagenFondo from '../assets/23102024-DSC04075.png';
 
@@ -9,7 +9,9 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false); // Estado de carga
 
+  // Redirige según el rol del usuario
   const redirigirPorRol = (rol) => {
     if (rol === 'Administrador') {
       navigate('/admin');
@@ -20,12 +22,17 @@ const Login = () => {
     }
   };
 
+  // Maneja el envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true); // Activa pantalla de carga
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/login', { email, password });
+      const response = await axios.post('http://127.0.0.1:8000/api/login', {
+        email,
+        password,
+      });
 
       localStorage.setItem('authToken', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -33,10 +40,14 @@ const Login = () => {
       setEmail('');
       setPassword('');
 
-      redirigirPorRol(response.data.user.rol);
+      // Simula una pequeña pausa visual antes de redirigir
+      setTimeout(() => {
+        redirigirPorRol(response.data.user.rol);
+      }, 1200); // 1.2 segundos
 
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.message) {
+      setLoading(false); // Detiene carga si hay error
+      if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {
         setError('Ocurrió un error inesperado.');
@@ -45,10 +56,26 @@ const Login = () => {
     }
   };
 
+  // PANTALLA DE CARGA personalizada
+if (loading) {
+  return (
+    <div className="loader-container">
+      <div className="loader-spinner"></div>
+      <p className="loading-quote">“Cuidamos tu salud con ciencia y corazón.”
+        <span className="loading-dot">.</span>
+        <span className="loading-dot">.</span>
+        <span className="loading-dot">.</span>
+      </p>
+    </div>
+  );
+}
+
+
+  // FORMULARIO DE LOGIN
   return (
     <div className="login-layout">
       <div className="login-card">
-        {/* Imagen (siempre visible) */}
+        {/* Imagen de fondo al costado */}
         <div className="login-image">
           <img src={imagenFondo} alt="Fondo" />
         </div>
@@ -88,3 +115,5 @@ const Login = () => {
 };
 
 export default Login;
+
+

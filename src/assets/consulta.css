@@ -16,7 +16,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Estructura principal */
+/* Layout */
 .consulta-layout {
   display: flex;
   flex-direction: column;
@@ -24,7 +24,7 @@ body {
   width: 100%;
 }
 
-/* HEADER */
+/* ✅ HEADER (NO SE TOCA) */
 .consulta-header {
     background: #00A3E0 !important;
     padding: 0.5rem 1rem;
@@ -37,7 +37,7 @@ body {
 }
 
 .consulta-title {
-    color: rgb(0, 0, 0);
+    color: rgb(255, 255, 255);
     font-weight: bold;
     font-size: 1.2rem;
 }
@@ -46,7 +46,6 @@ body {
     font-size: 1.9rem;
     font-weight: bold;
 }
-
 
 .navbar-brand {
   font-weight: 600;
@@ -63,7 +62,7 @@ body {
   width: 100%;
 }
 
-/* FOOTER */
+/* ✅ FOOTER */
 .consulta-footer {
   background: #333 !important;
   padding: 1.5rem 0 !important;
@@ -81,7 +80,7 @@ body {
   margin-right: 0.5rem;
 }
 
-/* Estilos solo para la vista Consulta */
+/* ✅ Cards */
 .consulta-layout .product-card {
   background-color: #fff;
   border-radius: 8px;
@@ -96,10 +95,32 @@ body {
 }
 
 .consulta-layout .product-card.inactive {
-  border: 2px solid #f90019; /* rojo */
+  border: 2px solid #f90019;
 }
 
-/* ✅ Botones */
+/* ✅ Botones del contenido */
+.btn-ver,
+.btn-editar,
+.btn-eliminar,
+.btn-cargar {
+  background: #006B9A !important; /* ✅ Color corporativo */
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 10px 20px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s !important;
+}
+
+.btn-ver:hover,
+.btn-editar:hover,
+.btn-eliminar:hover,
+.btn-cargar:hover {
+  background: #0088C2 !important; /* ✅ Hover más claro */
+  transform: translateY(-2px);
+}
+
+/* ✅ Botones generales (header u otros) se mantienen igual */
 .btn {
   background: #006B9A !important;
   border: none !important;
@@ -116,22 +137,7 @@ body {
   transform: translateY(-2px);
 }
 
-/* ✅ Botón especial "Ver" */
-.btn-ver {
-  background: #006B9A !important;
-  color: white !important;
-  border-radius: 8px !important;
-  padding: 10px 20px !important;
-  font-weight: 500 !important;
-  transition: all 0.3s !important;
-}
-
-.btn-ver:hover {
-  background: #006B9A !important;
-  transform: translateY(-2px);
-}
-
-/* Tabla */
+/* ✅ Tabla */
 .table-scroll-wrapper {
   position: relative;
   width: 100%;
@@ -165,7 +171,7 @@ th, td {
 }
 
 th {
-  background-color: #00A3E0;
+  background-color: #006B9A;
   color: white;
   position: sticky;
   top: 0;
@@ -196,7 +202,7 @@ tr:hover {
 }
 
 .pagination .page-item .page-link {
-  background: #00A3E0;
+  background: #006B9A; /* ✅ Color corporativo */
   color: white;
   border: none;
   width: 40px;
@@ -209,7 +215,7 @@ tr:hover {
 }
 
 .pagination .page-item .page-link:hover {
-  background: #33BAE8;
+  background: #006B9A; /* ✅ Hover */
   transform: scale(1.1);
 }
 
@@ -220,7 +226,7 @@ tr:hover {
 
 /* ✅ Modal INACTIVO */
 .inactive-modal .modal-content {
-  border: 3px solid #dc3545; /* borde rojo */
+  border: 3px solid #dc3545;
   border-radius: 10px;
 }
 
@@ -230,10 +236,15 @@ tr:hover {
 }
 
 .inactive-modal-body {
-  background-color: #ffe6e6; /* fondo rojizo suave */
+  background-color: #ffe6e6;
 }
 
-/* Responsive */
+.modal-backdrop.show {
+  backdrop-filter: blur(3px);
+  background-color: rgba(0, 0, 0, 0.212);
+}
+
+/* ✅ Responsive */
 @media (max-width: 768px) {
   th, td {
     font-size: 0.85rem;
@@ -245,3 +256,10 @@ tr:hover {
     height: 36px;
   }
 }
+.modal-body ul {
+    padding-left: 20px;
+}
+.modal-body li {
+    margin-bottom: 8px;
+}
+
