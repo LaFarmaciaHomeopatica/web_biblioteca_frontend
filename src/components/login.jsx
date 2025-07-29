@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import '../assets/login.css'; // Mantén tu estilo base aquí
+import '../assets/login.css';
 import { useNavigate } from 'react-router-dom';
 import imagenFondo from '../assets/23102024-DSC04075.png';
+import { useAuth } from '../context/AuthContext'; // ✅ Importa el hook de autenticación
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth(); // ✅ Accede al método de login del contexto
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false); // Estado de carga
+  const [loading, setLoading] = useState(false);
 
-  // Redirige según el rol del usuario
   const redirigirPorRol = (rol) => {
     if (rol === 'Administrador') {
       navigate('/admin');
@@ -22,11 +24,10 @@ const Login = () => {
     }
   };
 
-  // Maneja el envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true); // Activa pantalla de carga
+    setLoading(true);
 
     try {
       const response = await axios.post('http://127.0.0.1:8000/api/login', {
@@ -34,19 +35,19 @@ const Login = () => {
         password,
       });
 
-      localStorage.setItem('authToken', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const { token, user } = response.data;
+
+      // ✅ Guarda en el contexto global (también guarda en localStorage internamente)
+      login(token, user);
 
       setEmail('');
       setPassword('');
 
-      // Simula una pequeña pausa visual antes de redirigir
       setTimeout(() => {
-        redirigirPorRol(response.data.user.rol);
-      }, 1200); // 1.2 segundos
-
+        redirigirPorRol(user.rol);
+      }, 1200);
     } catch (err) {
-      setLoading(false); // Detiene carga si hay error
+      setLoading(false);
       if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {
@@ -56,31 +57,29 @@ const Login = () => {
     }
   };
 
-  // PANTALLA DE CARGA personalizada
-if (loading) {
-  return (
-    <div className="loader-container">
-      <div className="loader-spinner"></div>
-      <p className="loading-quote">“Cuidamos tu salud con ciencia y corazón.”
-        <span className="loading-dot">.</span>
-        <span className="loading-dot">.</span>
-        <span className="loading-dot">.</span>
-      </p>
-    </div>
-  );
-}
+  // ✅ Pantalla de carga personalizada
+  if (loading) {
+    return (
+      <div className="loader-container">
+        <div className="loader-spinner"></div>
+        <p className="loading-quote">
+          “Cuidamos tu salud con ciencia y corazón.”
+          <span className="loading-dot">.</span>
+          <span className="loading-dot">.</span>
+          <span className="loading-dot">.</span>
+        </p>
+      </div>
+    );
+  }
 
-
-  // FORMULARIO DE LOGIN
+  // ✅ Formulario de login
   return (
     <div className="login-layout">
       <div className="login-card">
-        {/* Imagen de fondo al costado */}
         <div className="login-image">
           <img src={imagenFondo} alt="Fondo" />
         </div>
 
-        {/* Formulario */}
         <div className="login-form">
           <h2 className="login-title">Iniciar Sesión</h2>
           {error && <div className="error-message">{error}</div>}
@@ -106,7 +105,9 @@ if (loading) {
               />
             </div>
 
-            <button type="submit" className="btn-login">Ingresar</button>
+            <button type="submit" className="btn-login">
+              Ingresar
+            </button>
           </form>
         </div>
       </div>
@@ -115,5 +116,3 @@ if (loading) {
 };
 
 export default Login;
-
-
