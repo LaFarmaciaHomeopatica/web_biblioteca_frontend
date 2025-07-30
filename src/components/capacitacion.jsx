@@ -7,26 +7,26 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/capacitacion.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
+import { useAuth } from '../context/AuthContext';
 
 const Capacitacion = () => {
     const navigate = useNavigate();
+    const { token } = useAuth(); // ✅ Token desde el contexto
     const [documentos, setDocumentos] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-
     const [currentPage, setCurrentPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
 
     useEffect(() => {
-        fetchDocumentos();
+        fetchDocumentos(currentPage);
+        // eslint-disable-next-line
     }, []);
 
-    // ✅ Llamada al backend con paginación
     const fetchDocumentos = async (page = 1) => {
         setLoading(true);
         setError(null);
         try {
-            const token = localStorage.getItem('authToken');
             if (!token) {
                 setError('No autorizado. Por favor, inicia sesión.');
                 setLoading(false);
@@ -37,9 +37,8 @@ const Capacitacion = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            let data = response.data.data || [];
+            const data = response.data.data || [];
 
-            // ✅ Filtrar SOLO documentos que contengan "capacitacion"
             const docsFiltrados = data.filter(doc =>
                 doc.nombre && doc.nombre.toLowerCase().includes('capacitacion')
             );
@@ -73,7 +72,6 @@ const Capacitacion = () => {
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Nav className="ms-auto d-flex flex-column flex-lg-row gap-2 mt-3 mt-lg-0">
-
                             <Button onClick={handleGoToLaboratorios}>
                                 <i className="bi bi-droplet me-1"></i> Laboratorios
                             </Button>
@@ -104,7 +102,6 @@ const Capacitacion = () => {
                                 {loading && <div className="text-center mb-3">Cargando documentos...</div>}
                                 {error && <div className="alert alert-danger">{error}</div>}
 
-                                {/* ✅ Lista de documentos en formato GRID */}
                                 <div className="document-list">
                                     {documentos.length > 0 ? (
                                         documentos.map((doc, index) => (
@@ -135,7 +132,6 @@ const Capacitacion = () => {
                                     )}
                                 </div>
 
-                                {/* ✅ Paginación igual a Vademecum */}
                                 <div className="pagination-wrapper mt-3 d-flex justify-content-center">
                                     <button
                                         className="pagination-btn"

@@ -339,7 +339,7 @@ const Documentos = () => {
                             <ul>
                                 <li>El archivo debe estar en formato <strong>PDF</strong>.</li>
                                 <li>Asegúrate de que el nombre del archivo sea claro y representativo.</li>
-                                <li>Puedes seleccionar múltiples archivos para subir al mismo tiempo.</li>
+                                <li>Puedes seleccionar 20 archivos para subir al mismo tiempo.</li>
                                 <li>No se aceptarán archivos con nombres duplicados ya cargados.</li>
                                 <li>Verifica que la conexión a internet esté activa antes de iniciar la carga.</li>
                             </ul>

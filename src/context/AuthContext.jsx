@@ -1,49 +1,43 @@
-// src/context/AuthContext.jsx
-import { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
-  const [user, setUser] = useState(null); // 👈 Información del usuario, incluyendo el rol
+  const [usuario, setUsuario] = useState(null);
+  const [loading, setLoading] = useState(true); // 👈 Importante para evitar flicker en rutas
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("authToken");
-    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem('authToken');
+    const storedUsuario = localStorage.getItem('authUsuario');
 
-    if (storedToken && storedUser) {
+    if (storedToken && storedUsuario) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
+      setUsuario(JSON.parse(storedUsuario));
     }
+
+    setLoading(false); // 👈 Ya cargó
   }, []);
 
-  const login = (authToken, userData) => {
-    localStorage.setItem("authToken", authToken);
-    localStorage.setItem("user", JSON.stringify(userData));
-
-    setToken(authToken);
-    setUser(userData);
-    setIsAuthenticated(true);
+  const login = (token, usuario) => {
+    setToken(token);
+    setUsuario(usuario);
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('authUsuario', JSON.stringify(usuario));
   };
 
   const logout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-
     setToken(null);
-    setUser(null);
-    setIsAuthenticated(false);
+    setUsuario(null);
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUsuario');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, token, user, login, logout }}>
+    <AuthContext.Provider value={{ token, usuario, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);

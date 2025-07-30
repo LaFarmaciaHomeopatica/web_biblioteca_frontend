@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Button, Card, Table, Row, Col, Form, Modal } from 'react-bootstrap';
+import { Container, Navbar, Button, Card, Table, Row, Col, Form, Modal, InputGroup } from 'react-bootstrap';
 import axios from 'axios';
 import '../assets/usuarios.css';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,7 @@ const Usuarios = () => {
     const [usuarios, setUsuarios] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [showModal, setShowModal] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [currentUser, setCurrentUser] = useState({
         id: '',
         name: '',
@@ -25,7 +26,7 @@ const Usuarios = () => {
     }, []);
 
     const handleBack = () => {
-        navigate('/admin'); // NO borra el token
+        navigate('/admin');
     };
 
     const handleSearch = (e) => {
@@ -46,6 +47,7 @@ const Usuarios = () => {
             password: '',
             rol: user.rol
         });
+        setShowPassword(false);
         setShowModal(true);
     };
 
@@ -95,44 +97,30 @@ const Usuarios = () => {
             password: '',
             rol: ''
         });
+        setShowPassword(false);
         setShowModal(true);
     };
 
     return (
         <div className="usuarios-layout">
-            {/* HEADER */}
             <Navbar className="usuarios-header">
                 <Container fluid className="d-flex justify-content-between align-items-center">
-                    {/* Logo y título */}
                     <div className="d-flex align-items-center">
-                        <img
-                            src={logo}
-                            alt="Logo de la empresa"
-                            width="40"
-                            height="40"
-                            className="d-inline-block align-top me-2"
-                        />
+                        <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
                         <span className="usuarios-title">BIBLIOTECALFH</span>
                     </div>
-
-                    {/* Botón volver solo visible en pantallas pequeñas */}
-                    <Button
-                        onClick={handleBack}
-                        className="logout-button d-block "
-                    >
+                    <Button onClick={handleBack} className="logout-button">
                         <i className="bi bi-arrow-left-circle me-1"></i> Volver
                     </Button>
                 </Container>
             </Navbar>
 
-            {/* CONTENIDO */}
             <Container fluid className="usuarios-content mt-4 px-3 px-md-5">
                 <Card className="usuarios-card">
                     <h2 className="usuarios-title-main mb-4 text-center text-md-start">
                         Gestión de Usuarios
                     </h2>
                     <Card.Body>
-                        {/* ENCABEZADO + BUSCADOR RESPONSIVE */}
                         <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-2">
                             <Button variant="success" onClick={handleCreateUser} className="w-100 w-md-auto">
                                 <i className="bi bi-plus-circle me-1"></i> Nuevo Usuario
@@ -146,7 +134,6 @@ const Usuarios = () => {
                             </Form.Group>
                         </div>
 
-                        {/* TABLA (visible solo en pantallas grandes) */}
                         <div className="table-responsive d-none d-md-block">
                             <Table striped bordered hover>
                                 <thead>
@@ -166,18 +153,10 @@ const Usuarios = () => {
                                             <td>{usuario.email}</td>
                                             <td>{usuario.rol || 'Sin rol'}</td>
                                             <td className="d-flex flex-wrap gap-2">
-                                                <Button
-                                                    variant="primary"
-                                                    size="sm"
-                                                    onClick={() => handleEdit(usuario)}
-                                                >
+                                                <Button variant="primary" size="sm" onClick={() => handleEdit(usuario)}>
                                                     <i className="bi bi-pencil"></i> Editar
                                                 </Button>
-                                                <Button
-                                                    variant="danger"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(usuario.id)}
-                                                >
+                                                <Button variant="danger" size="sm" onClick={() => handleDelete(usuario.id)}>
                                                     <i className="bi bi-trash"></i> Eliminar
                                                 </Button>
                                             </td>
@@ -187,7 +166,6 @@ const Usuarios = () => {
                             </Table>
                         </div>
 
-                        {/* CARDS (solo en pantallas pequeñas) */}
                         <div className="d-md-none">
                             <Row>
                                 {filteredUsers.map((usuario) => (
@@ -199,18 +177,10 @@ const Usuarios = () => {
                                                 <p className="mb-1"><strong>Correo:</strong> {usuario.email}</p>
                                                 <p className="mb-3"><strong>Rol:</strong> {usuario.rol || 'Sin rol'}</p>
                                                 <div className="d-flex flex-wrap gap-2">
-                                                    <Button
-                                                        variant="primary"
-                                                        size="sm"
-                                                        onClick={() => handleEdit(usuario)}
-                                                    >
+                                                    <Button variant="primary" size="sm" onClick={() => handleEdit(usuario)}>
                                                         <i className="bi bi-pencil"></i> Editar
                                                     </Button>
-                                                    <Button
-                                                        variant="danger"
-                                                        size="sm"
-                                                        onClick={() => handleDelete(usuario.id)}
-                                                    >
+                                                    <Button variant="danger" size="sm" onClick={() => handleDelete(usuario.id)}>
                                                         <i className="bi bi-trash"></i> Eliminar
                                                     </Button>
                                                 </div>
@@ -224,7 +194,6 @@ const Usuarios = () => {
                 </Card>
             </Container>
 
-            {/* MODAL */}
             <Modal show={showModal} onHide={() => setShowModal(false)} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>{currentUser.id ? 'Editar Usuario' : 'Nuevo Usuario'}</Modal.Title>
@@ -234,48 +203,34 @@ const Usuarios = () => {
                         {currentUser.id && (
                             <Form.Group className="mb-3">
                                 <Form.Label>ID</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    name="id"
-                                    value={currentUser.id}
-                                    disabled
-                                />
+                                <Form.Control type="text" value={currentUser.id} disabled />
                             </Form.Group>
                         )}
                         <Form.Group className="mb-3">
                             <Form.Label>Nombre</Form.Label>
-                            <Form.Control
-                                type="text"
-                                name="name"
-                                value={currentUser.name}
-                                onChange={handleInputChange}
-                            />
+                            <Form.Control type="text" name="name" value={currentUser.name} onChange={handleInputChange} />
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>Correo</Form.Label>
-                            <Form.Control
-                                type="email"
-                                name="email"
-                                value={currentUser.email}
-                                onChange={handleInputChange}
-                            />
+                            <Form.Control type="email" name="email" value={currentUser.email} onChange={handleInputChange} />
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>Contraseña</Form.Label>
-                            <Form.Control
-                                type="password"
-                                name="password"
-                                value={currentUser.password}
-                                onChange={handleInputChange}
-                            />
+                            <InputGroup>
+                                <Form.Control
+                                    type={showPassword ? 'text' : 'password'}
+                                    name="password"
+                                    value={currentUser.password}
+                                    onChange={handleInputChange}
+                                />
+                                <Button variant="outline-secondary" onClick={() => setShowPassword(!showPassword)}>
+                                    <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                                </Button>
+                            </InputGroup>
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>Rol</Form.Label>
-                            <Form.Select
-                                name="rol"
-                                value={currentUser.rol}
-                                onChange={handleInputChange}
-                            >
+                            <Form.Select name="rol" value={currentUser.rol} onChange={handleInputChange}>
                                 <option value="">Seleccionar rol</option>
                                 <option value="Administrador">Administrador</option>
                                 <option value="Farmacéutico">Farmacéutico</option>
@@ -294,7 +249,6 @@ const Usuarios = () => {
                 </Modal.Footer>
             </Modal>
 
-            {/* FOOTER */}
             <footer className="usuarios-footer">
                 <Container fluid>
                     <Row className="py-3">

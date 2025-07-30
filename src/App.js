@@ -78,7 +78,7 @@ const App = () => {
           <Route
             path="/vademecum"
             element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
+              <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
                 <Vademecum />
               </ProtectedRoute>
             }
@@ -86,7 +86,7 @@ const App = () => {
           <Route
             path="/laboratorios"
             element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
+              <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
                 <Laboratorios />
               </ProtectedRoute>
             }
@@ -94,7 +94,7 @@ const App = () => {
           <Route
             path="/capacitacion"
             element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
+              <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
                 <Capacitacion />
               </ProtectedRoute>
             }
@@ -102,7 +102,7 @@ const App = () => {
           <Route
             path="/productoporlaboratorio/:laboratorioNombre"
             element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
+              <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
                 <ProductoPorLaboratorio />
               </ProtectedRoute>
             }
