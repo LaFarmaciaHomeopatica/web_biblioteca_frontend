@@ -1,70 +1,107 @@
-# Getting Started with Create React App
+# Web Homeopática Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+<p align="center">
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" />
+  <img src="https://img.shields.io/badge/JavaScript-77.5%25-blue" alt="Main Language" />
+  <img src="https://img.shields.io/badge/status-active-brightgreen" alt="Status" />
+</p>
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## ✨ Overview
 
-### `npm start`
+**Web Homeopática Frontend** es un proyecto de frontend moderno construido con JavaScript y orientado a prácticas profesionales de desarrollo y despliegue. El repositorio está preparado para facilitar el desarrollo, integración y automatización siguiendo buenas prácticas de la industria.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 🎨 Tech Stack
 
-### `npm test`
+<div align="center">
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+| Lenguaje / Herramienta     | Uso                                              |
+|----------------------------|--------------------------------------------------|
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg" width="24"/> JavaScript | Lógica principal y scripting                  |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg" width="24"/> CSS        | Estilos frontend responsivos y modernos        |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg" width="24"/> HTML     | Estructura y recursos estáticos                |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" width="24"/> Docker | Contenerización y despliegue (recomendado)     |
+| <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="24"/> GitHub Actions | Automatización CI/CD                        |
 
-### `npm run build`
+</div>
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+---
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 🗂️ Project Structure
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```text
+.
+├── src/                 # Código fuente de la aplicación
+├── public/              # Recursos estáticos (HTML/CSS/Imágenes)
+├── .github/workflows/   # Pipelines CI/CD (GitHub Actions)
+├── Dockerfile           # Definición de imagen de contenedor
+└── README.md            # Documentación del proyecto
+```
 
-### `npm run eject`
+---
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## ⚡ Features
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- Aplicación frontend lista para desarrollo, pruebas y despliegue
+- Automatización DevOps: CI/CD, testing, linting y flujos de despliegue
+- Documentación clara y código comentado para colaboración fluida
+- Codebase elegante y escalable, ideal para aprendizaje y mejora continua
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+---
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 🛠️ Getting Started
 
-## Learn More
+> **Clona, instala y ejecuta en minutos.**
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+# Clona el repositorio
+git clone https://github.com/jonsegu/web_homeopatica_frontend.git
+cd web_homeopatica_frontend
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+# Instala las dependencias
+npm install
 
-### Code Splitting
+# Ejecuta la app en desarrollo
+npm start
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+---
 
-### Analyzing the Bundle Size
+## 🧪 Testing
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```bash
+npm test
+```
 
-### Making a Progressive Web App
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## 🚀 Deployment
 
-### Advanced Configuration
+- **Docker Container:**
+  ```bash
+  docker build -t web-homeopatica-frontend .
+  docker run -p 3000:3000 web-homeopatica-frontend
+  ```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+- **CI/CD:** Automatizado vía workflows en `.github/workflows/`.
 
-### Deployment
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## 🤝 Contributing
 
-### `npm run build` fails to minify
+¡Las contribuciones son bienvenidas! Abre un issue o un pull request para proponer mejoras o discutir cambios.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+---
+
+## 📃 License
+
+Distribuido bajo la licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
+
+---
+
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=110&section=footer"/>
+</p>
