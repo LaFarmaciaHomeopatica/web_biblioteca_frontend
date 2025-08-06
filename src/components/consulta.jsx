@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
     Container, Navbar, Form, FormControl, Button, Row, Col,
-    Card, Modal
+    Card, Modal, Alert, Spinner, Tabs, Tab, Table, Badge
 } from 'react-bootstrap';
 import * as XLSX from 'xlsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -10,12 +10,13 @@ import '../assets/consulta.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
 
+
+
 const Consulta = () => {
     const navigate = useNavigate();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [filterBy, setFilterBy] = useState('nombre');
-
     const [productos, setProductos] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -29,14 +30,14 @@ const Consulta = () => {
     const [isNewProduct, setIsNewProduct] = useState(false);
     const [showInstructions, setShowInstructions] = useState(false);
 
+    // eslint-disable-next-line no-unused-vars
+    const [importFile, setImportFile] = useState(null);
+    const [importPreview, setImportPreview] = useState(null);
+    const [importing, setImporting] = useState(false);
+    const [showImportPreview, setShowImportPreview] = useState(false);
 
-
-
-    // ✅ Paginación
     const [currentPage, setCurrentPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
-
-    const handleBack = () => navigate('/admin');
 
     const fetchProductos = useCallback(async (page = 1) => {
         setLoading(true);
@@ -61,10 +62,7 @@ const Consulta = () => {
         fetchProductos(currentPage);
     }, [currentPage, fetchProductos]);
 
-    useEffect(() => {
-        fetchProductos(1);
-    }, [fetchProductos]);
-
+    const handleBack = () => navigate('/admin');
     const handleSearchChange = (e) => {
         setSearchTerm(e.target.value);
         setCurrentPage(1);
@@ -116,29 +114,50 @@ const Consulta = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSaveChanges = async () => {
-        setLoading(true);
-        try {
-            const token = localStorage.getItem('authToken');
-            const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+   const handleSaveChanges = async () => {
+    setLoading(true);
+    try {
+        const token = localStorage.getItem('authToken');
+        const headers = { 
+            Authorization: `Bearer ${token}`, 
+            'Content-Type': 'application/json' 
+        };
 
-            if (isNewProduct) {
-                await axios.post('http://localhost:8000/api/productos', formData, { headers });
-            } else {
-                await axios.put(`http://localhost:8000/api/productos/${editingProduct.id}`, formData, { headers });
-            }
+        // Limpiar el formData antes de enviarlo
+        const cleanFormData = Object.fromEntries(
+            Object.entries(formData).map(([key, value]) => [
+                key,
+                typeof value === 'string' ? value.trim() : value
+            ])
+        );
 
-            setShowEditModal(false);
-            setSuccessMessage(isNewProduct ? 'Producto creado exitosamente' : 'Producto actualizado correctamente');
-            fetchProductos(currentPage);
-        } catch {
-            setError(isNewProduct ? 'Error al crear el producto' : 'Error al actualizar el producto');
-        } finally {
-            setLoading(false);
+        console.log('Datos antes de enviar:', formData);
+
+        if (isNewProduct) {
+            await axios.post('http://localhost:8000/api/productos', cleanFormData, { headers });
+        } else {
+            await axios.put(`http://localhost:8000/api/productos/${editingProduct.id}`, cleanFormData, { headers });
         }
-    };
 
-    // ✅ Exportar Excel
+        setShowEditModal(false);
+        setSuccessMessage(isNewProduct ? 'Producto creado exitosamente' : 'Producto actualizado correctamente');
+        fetchProductos(currentPage);
+    } catch (error) {
+        console.error("Error desde backend:", error.response?.data || error.message);
+
+        // Mostrar error más específico al usuario si Laravel da información
+        if (error.response?.data?.errors) {
+            const errorMsg = Object.values(error.response.data.errors).flat().join(', ');
+            setError(errorMsg);
+        } else {
+            setError(isNewProduct ? 'Error al crear el producto' : 'Error al actualizar el producto');
+        }
+    } finally {
+        setLoading(false);
+    }
+};
+
+
     const handleExportExcel = async () => {
         try {
             const token = localStorage.getItem('authToken');
@@ -183,33 +202,205 @@ const Consulta = () => {
     };
 
 
-    // ✅ Importar Excel
-    const handleImportExcel = async (e) => {
+    
+    const handleImportPreview = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const formData = new FormData();
-        formData.append('file', file); // clave "file" debe coincidir con el backend
+        setLoading(true);
+        setError(null);
+        setImportPreview(null);
+
+        try {
+            // 1. Validar tipo de archivo
+            if (!['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(file.type)) {
+                throw new Error('Formato de archivo no válido. Solo se aceptan archivos Excel (.xlsx, .xls)');
+            }
+
+            // 2. Obtener token
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                throw new Error('No se encontró el token de autenticación');
+            }
+
+            // 3. Preparar FormData
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('timestamp', new Date().toISOString()); // Para evitar caché
+
+            // 4. Enviar archivo
+            const response = await axios.post(
+                'http://localhost:8000/api/productos/import-preview',
+                formData,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'multipart/form-data'
+                    },
+                    timeout: 60000 // 30 segundos timeout
+                }
+            );
+
+            // 5. Validar estructura de respuesta
+            if (!response.data || typeof response.data !== 'object') {
+                throw new Error('La respuesta del servidor no es válida');
+            }
+
+            // 6. Procesar datos
+            const processedData = {
+                crear: Array.isArray(response.data.crear) ? response.data.crear : [],
+                actualizar: Array.isArray(response.data.actualizar) ? response.data.actualizar : [],
+                eliminar: Array.isArray(response.data.eliminar) ? response.data.eliminar : [],
+                errores: Array.isArray(response.data.errores) ? response.data.errores : [],
+                metadata: {
+                    total_nuevos: Number(response.data.total_nuevos) || 0,
+                    total_actualizar: Number(response.data.total_actualizar) || 0,
+                    total_eliminar: Number(response.data.total_eliminar) || 0,
+                    total_filas: Number(response.data.total_filas) || 0,
+                    filas_procesadas: Number(response.data.filas_procesadas) || 0,
+                    filas_con_errores: Number(response.data.filas_con_errores) || 0
+                }
+            };
+
+            // 7. Validar datos mínimos
+            if (processedData.errores.length > 0 && processedData.errores.length === processedData.metadata.total_filas) {
+                throw new Error('El archivo contiene errores en todas las filas. Revise el formato.');
+            }
+
+            // 8. Actualizar estado
+            setImportFile(file);
+            setImportPreview(processedData);
+            setShowImportPreview(true);
+
+        } catch (error) {
+            // 9. Manejo de errores mejorado
+            let errorMsg = 'Error al procesar el archivo';
+
+
+            if (error.response) {
+                // Error del servidor
+                if (error.response.status === 413) {
+                    errorMsg = 'El archivo es demasiado grande';
+                } else if (error.response.data?.errors) {
+                    errorMsg = Object.values(error.response.data.errors).join(', ');
+                } else {
+                    errorMsg = error.response.data?.message ||
+                        `Error del servidor (${error.response.status})`;
+                }
+            } else if (error.message.includes('token')) {
+                errorMsg = 'Sesión expirada. Por favor, vuelva a iniciar sesión';
+            } else {
+                errorMsg = error.message;
+            }
+
+            setError(errorMsg);
+            console.error('Detalles del error:', {
+                error: error.message,
+                response: error.response?.data,
+                stack: error.stack
+            });
+
+        } finally {
+            setLoading(false);
+            if (e.target) e.target.value = ''; // Limpiar input
+        }
+    };
+
+    const handleConfirmImport = async () => {
+        if (!importPreview) {
+            setError('No hay datos de importación para confirmar');
+            return;
+        }
+
+        setImporting(true);
+        setShowImportPreview(false);
 
         try {
             const token = localStorage.getItem('authToken');
-            await axios.post('http://localhost:8000/api/productos/import-excel', formData, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
+            if (!token) {
+                throw new Error('No se encontró token de autenticación');
+            }
+
+            // 1. Preparar payload según lo que espera tu backend
+            const payload = {
+                crear: importPreview.crear.map(item => item.datos || item),
+                actualizar: importPreview.actualizar.map(item => ({
+                    id: item.id, // Asumo que tu backend espera el ID para actualizar
+                    ...(item.datos || item) // Todos los campos a actualizar
+                })),
+               eliminar: importPreview.eliminar.map(item => ({ codigo: item.codigo || item }))// Asumo que se usa ID para eliminar
+            };
+
+            console.log("Payload limpio:", JSON.stringify(payload, null, 2)); // Verifica esto!
+
+            // 2. Hacer la petición PUT (como muestra tu ruta)
+            const response = await axios.put(
+                'http://localhost:8000/api/productos/import-confirm',
+                payload,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    timeout: 20000 // 20 segundos de timeout
                 }
+            );
+
+            // 3. Manejar respuesta exitosa
+            if (!response.data) {
+                throw new Error('La respuesta del servidor está vacía');
+            }
+
+            setSuccessMessage([
+                '✅ Importación completada',
+                `• Nuevos: ${response.data.creados || 0}`,
+                `• Actualizados: ${response.data.actualizados || 0}`,
+                `• Eliminados: ${response.data.eliminados || 0}`
+            ].join('\n'));
+
+            // 4. Refrescar los datos
+            await fetchProductos(1);
+
+        } catch (error) {
+            // 5. Manejo detallado de errores
+            let errorMsg = 'Error al confirmar importación';
+
+            if (error.code === 'ECONNABORTED') {
+                errorMsg = 'El servidor no respondió a tiempo';
+            } else if (error.response) {
+                // Errores específicos del backend
+                switch (error.response.status) {
+                    case 401:
+                        errorMsg = 'No autorizado - Token inválido o expirado';
+                        break;
+                    case 404:
+                        errorMsg = 'El producto no existe (404)';
+                        break;
+                    case 422:
+                        errorMsg = error.response.data.message || 'Datos de validación incorrectos';
+                        break;
+                    default:
+                        errorMsg = error.response.data?.message || `Error del servidor (${error.response.status})`;
+                }
+            } else if (error.message.includes('token')) {
+                errorMsg = 'Problema de autenticación - Vuelve a iniciar sesión';
+            }
+
+            setError(errorMsg);
+            console.error('Detalles del error:', {
+                message: error.message,
+                response: error.response?.data,
+                config: error.config
             });
 
-            setSuccessMessage('Productos importados/actualizados correctamente desde Excel');
-            fetchProductos(currentPage); // recarga la tabla actual
-        } catch (error) {
-            if (error.response && error.response.data && error.response.data.message) {
-                setError(`Error al importar: ${error.response.data.message}`);
-            } else {
-                setError('Error al actualizar productos desde Excel');
-            }
+        } finally {
+            setImporting(false);
+            setImportFile(null);
+            setImportPreview(null);
         }
     };
+
     useEffect(() => {
         if (successMessage) {
             const timer = setTimeout(() => setSuccessMessage(null), 3000);
@@ -219,7 +410,6 @@ const Consulta = () => {
 
     return (
         <div className="consulta-layout">
-            {/* HEADER */}
             <Navbar expand="lg" className="consulta-header">
                 <Container fluid>
                     <Navbar.Brand className="d-flex align-items-center">
@@ -232,7 +422,6 @@ const Consulta = () => {
                 </Container>
             </Navbar>
 
-            {/* CONTENIDO */}
             <Container fluid className="consulta-content px-3 px-md-5">
                 <Card className="consulta-card mt-4">
                     <Card.Body>
@@ -254,7 +443,7 @@ const Consulta = () => {
                                 type="file"
                                 accept=".xlsx, .xls"
                                 style={{ display: 'none' }}
-                                onChange={handleImportExcel}
+                                onChange={handleImportPreview}
                             />
                             <Form className="d-flex flex-column flex-md-row gap-2 flex-grow-1">
                                 <FormControl
@@ -274,8 +463,8 @@ const Consulta = () => {
                         </div>
 
                         {loading && <div className="text-center mb-3">Cargando productos...</div>}
-                        {error && <div className="alert alert-danger">{error}</div>}
-                        {successMessage && <div className="alert alert-success">{successMessage}</div>}
+                        {error && <Alert variant="danger">{error}</Alert>}
+                        {successMessage && <Alert variant="success">{successMessage}</Alert>}
 
                         <div className="product-list">
                             {productos.length > 0 ? (
@@ -301,7 +490,6 @@ const Consulta = () => {
                             )}
                         </div>
 
-                        {/* ✅ Paginación */}
                         {lastPage > 1 && (
                             <div className="pagination-wrapper mt-3">
                                 <button
@@ -325,7 +513,6 @@ const Consulta = () => {
                 </Card>
             </Container>
 
-            {/* ✅ MODAL Ver */}
             <Modal show={showViewModal} onHide={() => setShowViewModal(false)} centered>
                 <Modal.Header
                     closeButton
@@ -362,7 +549,6 @@ const Consulta = () => {
                 </Modal.Body>
             </Modal>
 
-            {/* ✅ MODAL Editar/Crear COMPLETO */}
             <Modal show={showEditModal} onHide={() => !loading && setShowEditModal(false)} centered size="lg">
                 <Modal.Header closeButton>
                     <Modal.Title>{isNewProduct ? 'Crear Producto' : `Editar Producto: ${editingProduct?.nombre}`}</Modal.Title>
@@ -471,8 +657,6 @@ const Consulta = () => {
                 </Modal.Footer>
             </Modal>
 
-
-            {/* ✅ Modal de Instrucciones */}
             <Modal show={showInstructions} onHide={() => setShowInstructions(false)} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Guía para Importar Productos</Modal.Title>
@@ -511,10 +695,174 @@ const Consulta = () => {
                 </Modal.Footer>
             </Modal>
 
+            <Modal show={showImportPreview} onHide={() => setShowImportPreview(false)} centered size="xl">
+                <Modal.Header closeButton>
+                    <Modal.Title>
+                        Vista Previa de Importación
+                        {importPreview?.metadata && (
+                            <Badge bg="info" className="ms-2">
+                                Filas procesadas: {importPreview.metadata.filas_procesadas}/{importPreview.metadata.total_filas}
+                            </Badge>
+                        )}
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {importPreview && (
+                        <Tabs defaultActiveKey="crear" className="mb-3">
+                            {/* Pestaña "Nuevos" - Sin contador */}
+                            <Tab eventKey="crear" title="Nuevos">
+                                {importPreview.crear?.length > 0 ? (
+                                    <div className="table-responsive">
+                                        <Table striped bordered hover className="align-middle">
+                                            <thead className="table-dark">
+                                                <tr>
+                                                    <th>Código</th>
+                                                    <th>Nombre</th>
+                                                    <th>Precio Público</th>
+                                                    <th>Precio Médico</th>
+                                                    <th>Laboratorio</th>
+                                                    <th>Categoría</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {importPreview.crear.map((producto, index) => (
+                                                    <tr key={`new-${index}`}>
+                                                        <td>{producto.codigo || producto.datos?.codigo}</td>
+                                                        <td>{producto.nombre || producto.datos?.nombre || 'N/A'}</td>
+                                                        <td>${producto.precio_publico || producto.datos?.precio_publico || 'N/A'}</td>
+                                                        <td>${producto.precio_medico || producto.datos?.precio_medico || 'N/A'}</td>
+                                                        <td>{producto.laboratorio || producto.datos?.laboratorio || 'N/A'}</td>
+                                                        <td>{producto.categoria || producto.datos?.categoria || 'N/A'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </Table>
+                                    </div>
+                                ) : (
+                                    <Alert variant="info">No hay productos nuevos para crear</Alert>
+                                )}
+                            </Tab>
+
+                            {/* Pestaña "Actualizar" - Sin contador */}
+                            <Tab eventKey="actualizar" title="Actualizar">
+                                {importPreview.actualizar?.length > 0 ? (
+                                    <div className="table-responsive">
+                                        <Table striped bordered hover className="align-middle">
+                                            <thead className="table-dark">
+                                                <tr>
+                                                    <th>Código</th>
+                                                    <th>Nombre</th>
+                                                    <th>Campo</th>
+                                                    <th>Valor Actual</th>
+                                                    <th>Nuevo Valor</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {importPreview.actualizar.map((producto, index) => {
+                                                    const cambios = producto.campos_modificados ||
+                                                        (producto.datos ?
+                                                            Object.keys(producto.datos).filter(
+                                                                key => producto.actual && producto.actual[key] !== producto.datos[key]
+                                                            ) : []);
+
+                                                    return cambios.length > 0 ? (
+                                                        cambios.map((campo, i) => (
+                                                            <tr key={`update-${index}-${i}`}>
+                                                                <td>{producto.codigo}</td>
+                                                                <td>{producto.actual?.nombre || producto.nombre}</td>
+                                                                <td className="text-capitalize">{campo.replace('_', ' ')}</td>
+                                                                <td className="text-danger">
+                                                                    {producto.actual ? producto.actual[campo] : 'N/A'}
+                                                                </td>
+                                                                <td className="text-success">
+                                                                    {producto.datos ? producto.datos[campo] : producto[campo]}
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    ) : null;
+                                                }).filter(Boolean)}
+                                            </tbody>
+                                        </Table>
+                                    </div>
+                                ) : (
+                                    <Alert variant="info">No hay productos para actualizar</Alert>
+                                )}
+                            </Tab>
+
+                            {/* Pestaña "Eliminar" - Sin contador */}
+                            <Tab eventKey="eliminar" title="Eliminar">
+                                {importPreview.eliminar?.length > 0 ? (
+                                    <div className="table-responsive">
+                                        <Table striped bordered hover className="align-middle">
+                                            <thead className="table-dark">
+                                                <tr>
+                                                    <th>Código</th>
+                                                    <th>Nombre</th>
+                                                    <th>Laboratorio</th>
+                                                    <th>Motivo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {importPreview.eliminar.map((producto, index) => (
+                                                    <tr key={`delete-${index}`}>
+                                                        <td>{producto.codigo}</td>
+                                                        <td>{producto.nombre}</td>
+                                                        <td>{producto.laboratorio}</td>
+                                                        <td>{producto.motivo || 'No está en el archivo Excel'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </Table>
+                                    </div>
+                                ) : (
+                                    <Alert variant="info">No hay productos para eliminar</Alert>
+                                )}
+                            </Tab>
+
+                            {/* Pestaña "Errores" - Sin contador (opcional, si quieres mantenerlo déjalo como está) */}
+                            <Tab eventKey="errores" title="Errores">
+                                {importPreview.errores?.length > 0 ? (
+                                    <div>
+                                        {importPreview.errores.map((error, index) => (
+                                            <Alert key={`error-${index}`} variant="danger" className="mb-2">
+                                                {error.mensaje || error.message || 'Error desconocido'}
+                                                {error.filas && (
+                                                    <div className="mt-1">
+                                                        <small>Filas afectadas: {error.filas.join(', ')}</small>
+                                                    </div>
+                                                )}
+                                            </Alert>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <Alert variant="success">No se encontraron errores en el archivo</Alert>
+                                )}
+                            </Tab>
+                        </Tabs>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowImportPreview(false)}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={handleConfirmImport}
+                        disabled={importing || (importPreview?.errores?.length || 0) > 0}
+                    >
+                        {importing ? (
+                            <>
+                                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                                <span className="ms-2">Importando...</span>
+                            </>
+                        ) : 'Confirmar Importación'}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
             <footer className="consulta-footer text-center py-3">
                 © 2025 Farmacia Homeopática - Más alternativas, más servicio.
             </footer>
-
         </div>
     );
 };
