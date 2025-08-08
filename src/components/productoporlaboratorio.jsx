@@ -12,6 +12,15 @@ const ProductoPorLaboratorio = () => {
     const navigate = useNavigate();
     const { laboratorioNombre } = useParams();
 
+    // ✅ Función para formatear precios
+    const formatearPrecio = (valor) => {
+        if (valor == null || valor === '') return '';
+        return parseFloat(valor).toLocaleString('es-CO', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
+    };
+
     // Estados
     const [searchTerm, setSearchTerm] = useState('');
     const [productos, setProductos] = useState([]);
@@ -36,7 +45,6 @@ const ProductoPorLaboratorio = () => {
         setLoading(true);
         setError(null);
         try {
-            // ✅ Nueva URL usando tu API actualizada
             let url = `http://localhost:8000/api/productos/laboratorio/${encodeURIComponent(laboratorioNombre)}?page=${page}`;
             if (searchTerm.trim() !== '') {
                 url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -53,9 +61,6 @@ const ProductoPorLaboratorio = () => {
         }
     }, [laboratorioNombre, searchTerm]);
 
-    /**
-     * ✅ Efectos para carga inicial y cuando cambia la búsqueda
-     */
     useEffect(() => {
         fetchProductos(currentPage);
     }, [currentPage, fetchProductos]);
@@ -125,7 +130,7 @@ const ProductoPorLaboratorio = () => {
                                         <div className="product-info">
                                             <p><strong>Nombre:</strong> {producto.nombre}</p>
                                             <p><strong>Laboratorio:</strong> {producto.laboratorio}</p>
-                                            <p><strong>Precio Público:</strong> ${producto.precio_publico}</p>
+                                            <p><strong>Precio Público:</strong> ${formatearPrecio(producto.precio_publico)}</p>
                                         </div>
                                         <div className="card-actions">
                                             <Button size="sm" variant="info" onClick={() => handleViewClick(producto)}>Ver</Button>
@@ -160,7 +165,6 @@ const ProductoPorLaboratorio = () => {
                     </Card.Body>
                 </Card>
             </Container>
-            
 
             {/* MODAL DETALLES */}
             <Modal show={showViewModal} onHide={() => setShowViewModal(false)} centered>
@@ -183,8 +187,8 @@ const ProductoPorLaboratorio = () => {
                         <>
                             <p><strong>Nombre:</strong> {viewingProduct.nombre}</p>
                             <p><strong>Estado Producto:</strong> {viewingProduct.estado_producto}</p>
-                            <p><strong>Precio Público:</strong> ${viewingProduct.precio_publico}</p>
-                            <p><strong>Precio Médico:</strong> ${viewingProduct.precio_medico}</p>
+                            <p><strong>Precio Público:</strong> ${formatearPrecio(viewingProduct.precio_publico)}</p>
+                            <p><strong>Precio Médico:</strong> ${formatearPrecio(viewingProduct.precio_medico)}</p>
                             <p><strong>IVA:</strong> {viewingProduct.iva}</p>
                             <p><strong>Requiere Fórmula Médica:</strong> {viewingProduct.formula_medica}</p>
                             <p><strong>Laboratorio:</strong> {viewingProduct.laboratorio}</p>

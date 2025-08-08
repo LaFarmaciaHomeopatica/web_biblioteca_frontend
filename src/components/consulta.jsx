@@ -13,6 +13,11 @@ import logo from '../assets/logo.jpeg';
 
 
 const Consulta = () => {
+const formatearPrecio = (valor) => {
+  if (valor === null || valor === undefined || valor === '') return '';
+  const numero = Number(String(valor).replace(/[^0-9.-]/g, ''));
+  return new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0 }).format(numero);
+};
     const navigate = useNavigate();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -38,6 +43,7 @@ const Consulta = () => {
 
     const [currentPage, setCurrentPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
+
 
     const fetchProductos = useCallback(async (page = 1) => {
         setLoading(true);
@@ -92,6 +98,8 @@ const Consulta = () => {
         setShowEditModal(true);
     };
 
+
+
     const handleDeleteClick = async (id) => {
         if (!window.confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
         setLoading(true);
@@ -114,48 +122,48 @@ const Consulta = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-   const handleSaveChanges = async () => {
-    setLoading(true);
-    try {
-        const token = localStorage.getItem('authToken');
-        const headers = { 
-            Authorization: `Bearer ${token}`, 
-            'Content-Type': 'application/json' 
-        };
+    const handleSaveChanges = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('authToken');
+            const headers = {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
 
-        // Limpiar el formData antes de enviarlo
-        const cleanFormData = Object.fromEntries(
-            Object.entries(formData).map(([key, value]) => [
-                key,
-                typeof value === 'string' ? value.trim() : value
-            ])
-        );
+            // Limpiar el formData antes de enviarlo
+            const cleanFormData = Object.fromEntries(
+                Object.entries(formData).map(([key, value]) => [
+                    key,
+                    typeof value === 'string' ? value.trim() : value
+                ])
+            );
 
-        console.log('Datos antes de enviar:', formData);
+            console.log('Datos antes de enviar:', formData);
 
-        if (isNewProduct) {
-            await axios.post('http://localhost:8000/api/productos', cleanFormData, { headers });
-        } else {
-            await axios.put(`http://localhost:8000/api/productos/${editingProduct.id}`, cleanFormData, { headers });
+            if (isNewProduct) {
+                await axios.post('http://localhost:8000/api/productos', cleanFormData, { headers });
+            } else {
+                await axios.put(`http://localhost:8000/api/productos/${editingProduct.id}`, cleanFormData, { headers });
+            }
+
+            setShowEditModal(false);
+            setSuccessMessage(isNewProduct ? 'Producto creado exitosamente' : 'Producto actualizado correctamente');
+            fetchProductos(currentPage);
+        } catch (error) {
+            console.error("Error desde backend:", error.response?.data || error.message);
+
+            // Mostrar error más específico al usuario si Laravel da información
+            if (error.response?.data?.errors) {
+                const errorMsg = Object.values(error.response.data.errors).flat().join(', ');
+                setError(errorMsg);
+            } else {
+                setError(isNewProduct ? 'Error al crear el producto' : 'Error al actualizar el producto');
+            }
+        } finally {
+            setLoading(false);
         }
-
-        setShowEditModal(false);
-        setSuccessMessage(isNewProduct ? 'Producto creado exitosamente' : 'Producto actualizado correctamente');
-        fetchProductos(currentPage);
-    } catch (error) {
-        console.error("Error desde backend:", error.response?.data || error.message);
-
-        // Mostrar error más específico al usuario si Laravel da información
-        if (error.response?.data?.errors) {
-            const errorMsg = Object.values(error.response.data.errors).flat().join(', ');
-            setError(errorMsg);
-        } else {
-            setError(isNewProduct ? 'Error al crear el producto' : 'Error al actualizar el producto');
-        }
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
 
     const handleExportExcel = async () => {
@@ -202,7 +210,7 @@ const Consulta = () => {
     };
 
 
-    
+
     const handleImportPreview = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -325,10 +333,10 @@ const Consulta = () => {
             const payload = {
                 crear: importPreview.crear.map(item => item.datos || item),
                 actualizar: importPreview.actualizar.map(item => ({
-                    id: item.id, // Asumo que tu backend espera el ID para actualizar
-                    ...(item.datos || item) // Todos los campos a actualizar
+                    codigo: item.codigo,
+                    ...(item.nuevo || item)
                 })),
-               eliminar: importPreview.eliminar.map(item => ({ codigo: item.codigo || item }))// Asumo que se usa ID para eliminar
+                eliminar: importPreview.eliminar.map(item => ({ codigo: item.codigo || item }))
             };
 
             console.log("Payload limpio:", JSON.stringify(payload, null, 2)); // Verifica esto!
@@ -343,7 +351,7 @@ const Consulta = () => {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    timeout: 20000 // 20 segundos de timeout
+                    timeout: 30000 // 20 segundos de timeout
                 }
             );
 
@@ -407,6 +415,8 @@ const Consulta = () => {
             return () => clearTimeout(timer);
         }
     }, [successMessage]);
+
+
 
     return (
         <div className="consulta-layout">
@@ -475,8 +485,8 @@ const Consulta = () => {
                                     >
                                         <div className="product-info">
                                             <p><strong>Nombre:</strong> {producto.nombre}</p>
-                                            <p><strong>Precio Público:</strong> ${producto.precio_publico}</p>
-                                            <p><strong>Precio Médico:</strong> ${producto.precio_medico}</p>
+                                            <p><strong>Precio Médico:</strong> {formatearPrecio(producto.precio_publico)}</p>
+                                            <p><strong>Precio Médico:</strong> {formatearPrecio(producto.precio_medico)}</p>
                                         </div>
                                         <div className="card-actions">
                                             <Button size="sm" variant="info" onClick={() => handleViewClick(producto)}>Ver</Button>
@@ -533,8 +543,8 @@ const Consulta = () => {
                         <>
                             <p><strong>Nombre:</strong> {viewingProduct.nombre}</p>
                             <p><strong>Estado Producto:</strong> {viewingProduct.estado_producto}</p>
-                            <p><strong>Precio Público:</strong> ${viewingProduct.precio_publico}</p>
-                            <p><strong>Precio Médico:</strong> ${viewingProduct.precio_medico}</p>
+                            <p><strong>Precio Médico:</strong> {formatearPrecio(viewingProduct.precio_publico)}</p>
+                            <p><strong>Precio Médico:</strong> {formatearPrecio(viewingProduct.precio_medico)}</p>
                             <p><strong>IVA:</strong> {viewingProduct.iva}</p>
                             <p><strong>Requiere Fórmula Médica:</strong> {viewingProduct.formula_medica}</p>
                             <p><strong>Laboratorio:</strong> {viewingProduct.laboratorio}</p>
@@ -729,8 +739,8 @@ const Consulta = () => {
                                                     <tr key={`new-${index}`}>
                                                         <td>{producto.codigo || producto.datos?.codigo}</td>
                                                         <td>{producto.nombre || producto.datos?.nombre || 'N/A'}</td>
-                                                        <td>${producto.precio_publico || producto.datos?.precio_publico || 'N/A'}</td>
-                                                        <td>${producto.precio_medico || producto.datos?.precio_medico || 'N/A'}</td>
+                                                        <td>{formatearPrecio(producto.precio_publico)}</td>
+                                                        <td>{formatearPrecio(producto.precio_medico)}</td>
                                                         <td>{producto.laboratorio || producto.datos?.laboratorio || 'N/A'}</td>
                                                         <td>{producto.categoria || producto.datos?.categoria || 'N/A'}</td>
                                                     </tr>

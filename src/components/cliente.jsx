@@ -10,6 +10,11 @@ import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
 
 const Cliente = () => {
+    const formatearPrecio = (valor) => {
+  if (valor === null || valor === undefined || valor === '') return '';
+  const numero = Number(String(valor).replace(/[^0-9.-]/g, ''));
+  return new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0 }).format(numero);
+};
     const navigate = useNavigate();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -152,8 +157,8 @@ const Cliente = () => {
                                                 <div className="product-info">
                                                     <p><strong>Nombre:</strong> {producto.nombre}</p>
                                                     <p><strong>Categoría:</strong> {producto.categoria}</p>
-                                                    <p><strong>Precio Público:</strong> ${producto.precio_publico}</p>
-                                                    <p><strong>Precio Médico:</strong> ${producto.precio_medico}</p>
+                                                    <p><strong>Precio Médico:</strong> ${formatearPrecio(producto.precio_publico)}</p>
+                                                    <p><strong>Precio Médico:</strong> ${formatearPrecio(producto.precio_medico)}</p>
                                                 </div>
                                                 <div className="card-actions">
                                                     <Button
@@ -221,8 +226,8 @@ const Cliente = () => {
                         <div>
                             <p><strong>Nombre:</strong> {selectedProducto.nombre}</p>
                             <p><strong>Estado Producto:</strong> {selectedProducto.estado_producto}</p>
-                            <p><strong>Precio Público:</strong> ${selectedProducto.precio_publico}</p>
-                            <p><strong>Precio Médico:</strong> ${selectedProducto.precio_medico}</p>
+                            <p><strong>Precio Público:</strong> ${formatearPrecio(selectedProducto.precio_publico)}</p>
+                            <p><strong>Precio Público:</strong> ${formatearPrecio(selectedProducto.precio_medico)}</p>
                             <p><strong>IVA:</strong> {selectedProducto.iva}</p>
                             <p><strong>Requiere Fórmula Médica:</strong> {selectedProducto.formula_medica}</p>
                             <p><strong>Laboratorio:</strong> {selectedProducto.laboratorio}</p>
