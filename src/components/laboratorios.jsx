@@ -24,8 +24,8 @@ import FUNAT from '../assets/img_lab/FUNAT.PNG';
 import GUNA from '../assets/img_lab/GUNA.PNG';
 import HAIKO from '../assets/img_lab/HAIKO.PNG';
 import HAVVA from '../assets/img_lab/havva.png';
-import HEALTY from '../assets/img_lab/HEALTY..PNG';
-import HELL from '../assets/img_lab/HELL.PNG';
+import HEALTHY from '../assets/img_lab/HEALTHY..PNG';
+import HEEL from '../assets/img_lab/HEEL.PNG';
 import HERBALMEDIK from '../assets/img_lab/HERBALMEDIK.PNG';
 import HERSSEN from '../assets/img_lab/Herssen.png';
 import JARROW from '../assets/img_lab/JARROW.PNG';
@@ -81,8 +81,8 @@ const laboratorios = [
     { nombre: 'GUNA', imagen: GUNA },
     { nombre: 'HAIKO', imagen: HAIKO },
     { nombre: 'HAVVA', imagen: HAVVA },
-    { nombre: 'HEALTY AMERICA', imagen: HEALTY },
-    { nombre: 'HELL', imagen: HELL },
+    { nombre: 'HEALTHY AMERICA', imagen: HEALTHY },
+    { nombre: 'HEEL', imagen: HEEL },
     { nombre: 'HERBALMEDIK', imagen: HERBALMEDIK },
     { nombre: 'HERSSEN', imagen: HERSSEN },
     { nombre: 'JARROW', imagen: JARROW },

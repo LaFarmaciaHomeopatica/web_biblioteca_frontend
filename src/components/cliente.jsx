@@ -8,8 +8,10 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/cliente.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
+import { useAuth } from '../context/AuthContext';
 
 const Cliente = () => {
+      const { logout } = useAuth()
     const formatearPrecio = (valor) => {
   if (valor === null || valor === undefined || valor === '') return '';
   const numero = Number(String(valor).replace(/[^0-9.-]/g, ''));
@@ -61,10 +63,10 @@ const Cliente = () => {
         setSelectedProducto(null);
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('authToken');
-        navigate('/');
-    };
+ const handleLogout = async () => {
+    await logout(); // Llama a logout para eliminar token en backend y limpiar localStorage
+    navigate('/');  // Luego redirige al login o inicio
+  };
 
     const handleGoToDocs = () => navigate('/clientedoc');
     const handleGoToVademecum = () => navigate('/vademecum');

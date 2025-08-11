@@ -4,13 +4,15 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/admin.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
+import { useAuth } from '../context/AuthContext';  // Importa el hook
 
 const Admin = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth(); // Obtén la función logout del contexto
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    navigate('/');
+  const handleLogout = async () => {
+    await logout(); // Llama a logout para eliminar token en backend y limpiar localStorage
+    navigate('/');  // Luego redirige al login o inicio
   };
 
   const handleConsulta = () => {
