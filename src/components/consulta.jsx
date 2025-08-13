@@ -13,11 +13,11 @@ import logo from '../assets/logo.jpeg';
 
 
 const Consulta = () => {
-const formatearPrecio = (valor) => {
-  if (valor === null || valor === undefined || valor === '') return '';
-  const numero = Number(String(valor).replace(/[^0-9.-]/g, ''));
-  return new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0 }).format(numero);
-};
+    const formatearPrecio = (valor) => {
+        if (valor === null || valor === undefined || valor === '') return '';
+        const numero = Number(String(valor).replace(/[^0-9.-]/g, ''));
+        return new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0 }).format(numero);
+    };
     const navigate = useNavigate();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -35,6 +35,7 @@ const formatearPrecio = (valor) => {
     const [isNewProduct, setIsNewProduct] = useState(false);
     const [showInstructions, setShowInstructions] = useState(false);
 
+
     // eslint-disable-next-line no-unused-vars
     const [importFile, setImportFile] = useState(null);
     const [importPreview, setImportPreview] = useState(null);
@@ -50,15 +51,25 @@ const formatearPrecio = (valor) => {
         setError(null);
         try {
             let url = `http://localhost:8000/api/productos?page=${page}`;
+
             if (searchTerm.trim() !== '') {
-                url += `&search=${encodeURIComponent(searchTerm)}&filterBy=${encodeURIComponent(filterBy)}`;
+                // Asegúrate que el filtro sea válido para el backend
+                const validFilters = ['nombre', 'codigo', 'categoria', 'precio_publico', 'precio_medico'];
+                const filterToUse = validFilters.includes(filterBy) ? filterBy : 'nombre';
+
+                // Usa los nombres de parámetros que espera el backend
+                url += `&search=${encodeURIComponent(searchTerm)}&filter_by=${filterToUse}`;
             }
+
+            console.log("URL de consulta:", url); // Para depuración
+
             const response = await axios.get(url);
             setProductos(response.data.data || []);
             setCurrentPage(response.data.current_page);
             setLastPage(response.data.last_page);
-        } catch {
+        } catch (error) {
             setError('Error al cargar los productos');
+            console.error("Error:", error.response?.data || error.message);
         } finally {
             setLoading(false);
         }
@@ -458,16 +469,17 @@ const formatearPrecio = (valor) => {
                             <Form className="d-flex flex-column flex-md-row gap-2 flex-grow-1">
                                 <FormControl
                                     type="text"
-                                    placeholder="Buscar por nombre, precio público, precio médico, laboratorio o código..."
+                                    placeholder="Buscar por nombre, laboratorio o código..."
                                     value={searchTerm}
                                     onChange={handleSearchChange}
                                 />
-                                <Form.Select value={filterBy} onChange={(e) => setFilterBy(e.target.value)}>
+                                <Form.Select
+                                    value={filterBy}
+                                    onChange={(e) => setFilterBy(e.target.value)}
+                                >
                                     <option value="nombre">Nombre</option>
-                                    <option value="precio_publico">Precio Público</option>
-                                    <option value="precio_medico">Precio Médico</option>
-                                    <option value="laboratorio">Laboratorio</option>
                                     <option value="codigo">Código</option>
+                                    <option value="categoria">Categoría</option>
                                 </Form.Select>
                             </Form>
                         </div>
@@ -485,7 +497,7 @@ const formatearPrecio = (valor) => {
                                     >
                                         <div className="product-info">
                                             <p><strong>Nombre:</strong> {producto.nombre}</p>
-                                            <p><strong>Precio Médico:</strong> {formatearPrecio(producto.precio_publico)}</p>
+                                            <p><strong>Precio Publico:</strong> {formatearPrecio(producto.precio_publico)}</p>
                                             <p><strong>Precio Médico:</strong> {formatearPrecio(producto.precio_medico)}</p>
                                         </div>
                                         <div className="card-actions">
@@ -503,17 +515,25 @@ const formatearPrecio = (valor) => {
                         {lastPage > 1 && (
                             <div className="pagination-wrapper mt-3">
                                 <button
-                                    className="pagination-btn"
+                                    className={`pagination-btn ${loading ? 'opacity-50' : ''}`}
                                     onClick={() => fetchProductos(currentPage - 1)}
-                                    disabled={currentPage === 1}
+                                    disabled={currentPage === 1 || loading}
                                 >
                                     <i className="bi bi-chevron-left"></i>
                                 </button>
-                                <span className="pagination-info">{currentPage} / {lastPage}</span>
+
+                                <span className="pagination-info">
+                                    {loading ? (
+                                        <Spinner animation="border" size="sm" />
+                                    ) : (
+                                        `${currentPage} / ${lastPage}`
+                                    )}
+                                </span>
+
                                 <button
-                                    className="pagination-btn"
+                                    className={`pagination-btn ${loading ? 'opacity-50' : ''}`}
                                     onClick={() => fetchProductos(currentPage + 1)}
-                                    disabled={currentPage === lastPage}
+                                    disabled={currentPage === lastPage || loading}
                                 >
                                     <i className="bi bi-chevron-right"></i>
                                 </button>

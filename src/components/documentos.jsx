@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
-    Container, Navbar, Button, Card, Modal, Form, ProgressBar, Alert
+    Container, Navbar, Button, Spinner,Card, Modal, Form, ProgressBar, Alert
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/documentos.css';
@@ -269,7 +269,13 @@ const Documentos = () => {
                                 >
                                     <i className="bi bi-chevron-left"></i>
                                 </button>
-                                <span className="pagination-info">{currentPage} / {lastPage}</span>
+                                <span className="pagination-info">
+                                    {loading ? (
+                                        <Spinner animation="border" size="sm" />
+                                    ) : (
+                                        `${currentPage} / ${lastPage}`
+                                    )}
+                                </span>
                                 <button
                                     className="pagination-btn"
                                     onClick={() => handlePageChange(currentPage + 1)}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-    Container, Navbar, Nav, Button, Row, Col, Card, Form
+    Container, Navbar, Nav, Button, Row, Col, Card, Form, Spinner
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/clientedoc.css';
@@ -154,7 +154,13 @@ const Clientedoc = () => {
                                         >
                                             <i className="bi bi-chevron-left"></i>
                                         </button>
-                                        <span className="pagination-info">{currentPage} / {lastPage}</span>
+                                          <span className="pagination-info">
+                                    {loading ? (
+                                        <Spinner animation="border" size="sm" />
+                                    ) : (
+                                        `${currentPage} / ${lastPage}`
+                                    )}
+                                </span>
                                         <button
                                             className="pagination-btn"
                                             onClick={() => fetchDocumentos(currentPage + 1, searchTerm)}

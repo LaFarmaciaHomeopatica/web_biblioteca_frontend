@@ -71,12 +71,12 @@ body.laboratorios-page {
     background-color: #f9f9f9;
     padding: 10px;
     
-    /* ✅ Blanco y negro por defecto */
+    /* Blanco y negro por defecto SOLO en pantallas grandes */
     filter: grayscale(100%);
-    transition: filter 0.5s ease; /* ✅ Transición suave */
+    transition: filter 0.5s ease; /* Transición suave */
 }
 
-/* ✅ Al pasar el cursor, la imagen vuelve a color */
+/* Al pasar el cursor, la imagen vuelve a color SOLO en pantallas grandes */
 .laboratorio-card:hover .laboratorio-img {
     filter: grayscale(0%);
 }
@@ -111,6 +111,13 @@ body.laboratorios-page {
 @media (max-width: 768px) {
     .laboratorio-img {
         height: 130px;
+        /* Mostrar siempre a color en móviles */
+        filter: grayscale(0%) !important;
+    }
+    
+    /* Desactivar efecto hover en móviles */
+    .laboratorio-card:hover .laboratorio-img {
+        filter: grayscale(0%) !important;
     }
 }
 

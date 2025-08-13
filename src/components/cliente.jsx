@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-    Container, Navbar, Nav, Form, FormControl, Button, Row, Col,
+    Container, Navbar, Nav, Form, Spinner,FormControl, Button, Row, Col,
     Card, Modal
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -11,12 +11,12 @@ import logo from '../assets/logo.jpeg';
 import { useAuth } from '../context/AuthContext';
 
 const Cliente = () => {
-      const { logout } = useAuth()
+    const { logout } = useAuth()
     const formatearPrecio = (valor) => {
-  if (valor === null || valor === undefined || valor === '') return '';
-  const numero = Number(String(valor).replace(/[^0-9.-]/g, ''));
-  return new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0 }).format(numero);
-};
+        if (valor === null || valor === undefined || valor === '') return '';
+        const numero = Number(String(valor).replace(/[^0-9.-]/g, ''));
+        return new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0 }).format(numero);
+    };
     const navigate = useNavigate();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -39,15 +39,20 @@ const Cliente = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await axios.get(
-                `http://localhost:8000/api/productos?page=${page}&search=${search}&filter_by=${filter}`
-            );
+            const response = await axios.get('http://localhost:8000/api/productos', {
+                params: {  // Axios se encargará de codificar correctamente los parámetros
+                    page: page,
+                    search: search,
+                    filter_by: filter
+                }
+            });
 
             setProductos(response.data.data || []);
             setCurrentPage(response.data.current_page);
             setLastPage(response.data.last_page);
         } catch (error) {
             setError('Error al cargar los productos');
+            console.error('Error fetching productos:', error);
         } finally {
             setLoading(false);
         }
@@ -63,10 +68,10 @@ const Cliente = () => {
         setSelectedProducto(null);
     };
 
- const handleLogout = async () => {
-    await logout(); // Llama a logout para eliminar token en backend y limpiar localStorage
-    navigate('/');  // Luego redirige al login o inicio
-  };
+    const handleLogout = async () => {
+        await logout(); // Llama a logout para eliminar token en backend y limpiar localStorage
+        navigate('/');  // Luego redirige al login o inicio
+    };
 
     const handleGoToDocs = () => navigate('/clientedoc');
     const handleGoToVademecum = () => navigate('/vademecum');
@@ -125,6 +130,7 @@ const Cliente = () => {
                                         onChange={(e) => {
                                             const value = e.target.value;
                                             setSearchTerm(value);
+                                            // Llama a fetchProductos con el valor sin modificar
                                             fetchProductos(1, value, filterBy);
                                         }}
                                     />
@@ -140,8 +146,6 @@ const Cliente = () => {
                                         <option value="nombre">Nombre</option>
                                         <option value="codigo">Código</option>
                                         <option value="categoria">Categoría</option>
-                                        <option value="precio_publico">Precio Público</option>
-                                        <option value="precio_medico">Precio Médico</option>
                                     </Form.Select>
                                 </Form>
 
@@ -159,7 +163,7 @@ const Cliente = () => {
                                                 <div className="product-info">
                                                     <p><strong>Nombre:</strong> {producto.nombre}</p>
                                                     <p><strong>Categoría:</strong> {producto.categoria}</p>
-                                                    <p><strong>Precio Médico:</strong> ${formatearPrecio(producto.precio_publico)}</p>
+                                                    <p><strong>Precio Publico:</strong> ${formatearPrecio(producto.precio_publico)}</p>
                                                     <p><strong>Precio Médico:</strong> ${formatearPrecio(producto.precio_medico)}</p>
                                                 </div>
                                                 <div className="card-actions">
@@ -188,7 +192,13 @@ const Cliente = () => {
                                     >
                                         <i className="bi bi-chevron-left"></i>
                                     </button>
-                                    <span className="pagination-info">{currentPage} / {lastPage}</span>
+                                     <span className="pagination-info">
+                                    {loading ? (
+                                        <Spinner animation="border" size="sm" />
+                                    ) : (
+                                        `${currentPage} / ${lastPage}`
+                                    )}
+                                </span>
                                     <button
                                         className="pagination-btn"
                                         onClick={() => fetchProductos(currentPage + 1, searchTerm, filterBy)}
