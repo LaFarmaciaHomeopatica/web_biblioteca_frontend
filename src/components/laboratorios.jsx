@@ -6,6 +6,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/laboratorios.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
+import { useAuth } from '../context/AuthContext'; // ✅ Importamos el hook
 
 // ✅ Importamos las imágenes
 import AROMATMA from '../assets/img_lab/AROMATMA.PNG';
@@ -123,15 +124,24 @@ const laboratorios = [
 
 const Laboratorios = () => {
     const navigate = useNavigate();
+    const { logout } = useAuth(); // ✅ Hook para logout
 
     const handleLaboratorioClick = (nombre) => {
         navigate(`/productoporlaboratorio/${encodeURIComponent(nombre)}`);
     };
 
     // ✅ Botones de navegación
+    const handleGoToLaboratorios = () => navigate('/laboratorios');
     const handleGoToVademecum = () => navigate('/vademecum');
     const handleGoToCapacitacion = () => navigate('/capacitacion');
     const handleGoToDocs = () => navigate('/clientedoc');
+    const handleGoToVencimiento = () => navigate('/vencimiento');
+
+    // ✅ Nuevo: cerrar sesión
+    const handleLogout = async () => {
+        await logout();
+        navigate('/');
+    };
 
     return (
         <div className="laboratorios-layout">
@@ -140,11 +150,26 @@ const Laboratorios = () => {
                 <Container fluid>
                     <Navbar.Brand className="d-flex align-items-center">
                         <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
-                        <span className="cliente-title">BIBLIOTECALFH</span>
+                        {/* ✅ Título clickeable que lleva a /cliente */}
+                        <span
+                            className="cliente-title"
+                            role="link"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => navigate('/cliente')}
+                            title="Ir a Productos"
+                        >
+                            BIBLIOTECALFH
+                        </span>
                     </Navbar.Brand>
                     <Navbar.Toggle aria-controls="navbarResponsive" />
                     <Navbar.Collapse id="navbarResponsive" className="justify-content-end">
                         <Nav className="d-flex flex-column flex-lg-row gap-2">
+                            <Button onClick={handleGoToVencimiento}>
+                                <i className="bi bi-hourglass-split me-1"></i> Vencimiento
+                            </Button>
+                            <Button onClick={handleGoToLaboratorios}>
+                                <i className="bi bi-droplet me-1"></i> Laboratorios
+                            </Button>
                             <Button onClick={handleGoToVademecum}>
                                 <i className="bi bi-book me-1"></i> Vademécum
                             </Button>
@@ -155,7 +180,11 @@ const Laboratorios = () => {
                                 <i className="bi bi-file-earmark-text me-1"></i> Documentos
                             </Button>
                             <Button onClick={() => navigate('/cliente')} variant="secondary">
-                                <i className="bi bi-arrow-left-circle me-1"></i> Productos
+                                <i className="bi bi-box-seam me-1"></i> Productos
+                            </Button>
+                            {/* ✅ Botón Salir */}
+                            <Button onClick={handleLogout} className="logout-button" variant="danger">
+                                <i className="bi bi-box-arrow-right me-1"></i> Salir
                             </Button>
                         </Nav>
                     </Navbar.Collapse>
@@ -189,10 +218,9 @@ const Laboratorios = () => {
             </Container>
 
             <footer className="documentos-footer text-center py-3">
-                © 2025 Farmacia Homeopática - Más alternativas, más servicio.
+                © 2025 La Farmacia Homeopática - Más alternativas, más servicio.
             </footer>
         </div>
-
     );
 };
 

@@ -26,25 +26,25 @@ body {
 
 /* ✅ HEADER (NO SE TOCA) */
 .consulta-header {
-    background: #00A3E0 !important;
-    padding: 0.5rem 1rem;
-    width: 100vw;
-    position: relative;
-    left: 50%;
-    right: 50%;
-    margin-left: -50vw;
-    margin-right: -50vw;
+  background: #00A3E0 !important;
+  padding: 0.5rem 1rem;
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
 }
 
 .consulta-title {
-    color: rgb(255, 255, 255);
-    font-weight: bold;
-    font-size: 1.2rem;
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  font-size: 1.2rem;
 }
 
 .consulta-title-main {
-    font-size: 1.9rem;
-    font-weight: bold;
+  font-size: 1.9rem;
+  font-weight: bold;
 }
 
 .navbar-brand {
@@ -213,6 +213,7 @@ tr:hover {
   justify-content: center;
   transition: all 0.3s;
 }
+
 .card {
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
@@ -220,7 +221,6 @@ tr:hover {
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.521);
 }
-
 
 .pagination .page-item .page-link:hover {
   background: #006B9A; /* ✅ Hover */
@@ -252,6 +252,24 @@ tr:hover {
   background-color: rgba(0, 0, 0, 0.212);
 }
 
+/* Evitar que los cuadros se salgan del contenedor */
+.product-info p,
+.product-info span,
+.product-info div {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.product-card,
+.product-info {
+  min-width: 0;
+}
+
+.product-card {
+  max-width: 100%;
+}
+
+
 /* ✅ Responsive */
 @media (max-width: 768px) {
   th, td {
@@ -264,10 +282,80 @@ tr:hover {
     height: 36px;
   }
 }
+
 .modal-body ul {
-    padding-left: 20px;
+  padding-left: 20px;
 }
 .modal-body li {
-    margin-bottom: 8px;
+  margin-bottom: 8px;
 }
 
+/* =========================
+   Modal "Ver" – MÁS ANCHO
+   ========================= */
+/* dialogClassName se aplica en el propio .modal-dialog, así que usamos selector combinado */
+.modal-dialog.consulta-view-modal {
+  /* Bootstrap 5 usa esta variable para el ancho */
+  --bs-modal-width: 1100px;     /* ancho deseado en pantallas medias/grandes */
+  max-width: 95vw;              /* evita desbordar el viewport */
+  width: auto;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 1400px) {
+  .modal-dialog.consulta-view-modal {
+    --bs-modal-width: 1200px;
+    max-width: 1200px;
+  }
+}
+
+/* En tablets/móviles grandes, que use casi todo el ancho */
+@media (max-width: 991.98px) {
+  .modal-dialog.consulta-view-modal {
+    --bs-modal-width: 95vw;
+    max-width: 95vw;
+    margin: 1rem;
+  }
+}
+
+/* Controla la altura para evitar scroll vertical excesivo */
+.consulta-view-modal .modal-body {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+}
+
+/* Estética */
+.consulta-view-modal .modal-content {
+  border-radius: 12px;
+}
+
+/* ==========================================
+   ✅ Botón flotante "Volver" (izquierda)
+   ========================================== */
+.back-floating-btn {
+  position: fixed;
+  left: 18px;          /* Ajusta para moverlo más a la izquierda/derecha */
+  top: 118px;          /* Ajusta para alinearlo con el título */
+  z-index: 1040;       /* Por encima del contenido */
+  border-radius: 999px;
+  padding: 6px 14px !important;       /* Override del .btn global */
+  background: #4b2eff !important;     /* Puedes cambiarlo si quieres otro color */
+  border: none !important;
+  color: #fff !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+}
+
+.back-floating-btn:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+/* Móvil: evitar que tape el título o estorbe en pantallas pequeñas */
+@media (max-width: 576px) {
+  .back-floating-btn {
+    top: 90px;
+    left: 12px;
+    padding: 6px 12px !important;
+  }
+}

@@ -16,6 +16,8 @@ import Vademecum from './components/vademecum.jsx';
 import Capacitacion from './components/capacitacion.jsx';
 import Laboratorios from './components/laboratorios.jsx';
 import ProductoPorLaboratorio from './components/productoporlaboratorio.jsx';
+import Vencimiento from './components/vencimiento.jsx';
+import VencimientoAdmin from './components/vencimientoadmin.jsx'; // ✅ ahora en minúscula
 
 const App = () => {
   return (
@@ -35,6 +37,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/usuarios"
             element={
@@ -43,6 +46,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/consulta"
             element={
@@ -51,6 +55,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/cliente"
             element={
@@ -59,6 +64,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/documentos"
             element={
@@ -67,6 +73,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/clientedoc"
             element={
@@ -75,6 +82,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/vademecum"
             element={
@@ -83,6 +91,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/laboratorios"
             element={
@@ -91,6 +100,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/capacitacion"
             element={
@@ -99,11 +109,32 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/productoporlaboratorio/:laboratorioNombre"
             element={
               <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
                 <ProductoPorLaboratorio />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ Vencimiento para roles de campo y admin */}
+          <Route
+            path="/vencimiento"
+            element={
+              <ProtectedRoute allowedRoles={['Farmacéutico', 'visitador medico', ]}>
+                <Vencimiento />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ Vencimiento exclusivo para Admin */}
+          <Route
+            path="/vencimiento-admin"
+            element={
+              <ProtectedRoute allowedRoles={['Administrador']}>
+                <VencimientoAdmin />
               </ProtectedRoute>
             }
           />
