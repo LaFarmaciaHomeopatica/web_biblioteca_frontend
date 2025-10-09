@@ -75,12 +75,12 @@ const Consulta = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
 
-  // ===== Modal de error “bonito” (p.ej. código duplicado/validaciones) =====
+  // ===== Modal de error “bonito” =====
   const [errorModal, setErrorModal] = useState({ show: false, title: '', message: '' });
   const openErrorModal = (title, message) => setErrorModal({ show: true, title, message });
   const closeErrorModal = () => setErrorModal({ show: false, title: '', message: '' });
 
-  // ===== Modal de éxito “bonito” (creación/actualización, exportación e importación) =====
+  // ===== Modal de éxito “bonito” =====
   const [successModal, setSuccessModal] = useState({ show: false, title: '', message: '' });
   const openSuccessModal = (title, message) => setSuccessModal({ show: true, title, message });
   const closeSuccessModal = () => setSuccessModal({ show: false, title: '', message: '' });
@@ -215,6 +215,7 @@ const Consulta = () => {
     setError(null);
     try {
       const token = localStorage.getItem('authToken');
+      if (!token) { setError('Sesión no válida. Vuelve a iniciar sesión.'); setLoading(false); return; }
       await axios.delete(`${API_BASE}/productos/${productToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
       });
@@ -258,11 +259,6 @@ const Consulta = () => {
       const headers = { Accept: 'application/json' };
       if (token) headers.Authorization = `Bearer ${token}`;
 
-      // Si tu backend soporta filtro por código, podrías hacer:
-      // const res = await axios.get(`${API_BASE}/productos?filter_by=codigo&search=${encodeURIComponent(code)}`, { headers });
-      // const list = res.data?.data ?? [];
-
-      // Como ya usas productos-all:
       const resAll = await axios.get(`${API_BASE}/productos-all`, { headers });
       const all = Array.isArray(resAll.data) ? resAll.data : [];
       return all.some(p => normalize(p.codigo) === code);
@@ -277,6 +273,8 @@ const Consulta = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('authToken');
+      if (!token) { setError('Sesión no válida. Vuelve a iniciar sesión.'); setLoading(false); return; }
+
       const headers = {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -494,6 +492,32 @@ const Consulta = () => {
     }
   };
 
+  /** ====== Helper central de errores para confirmación ====== */
+  function handleImportError(error) {
+    let errorMsg = 'Error al confirmar importación';
+    if (error.code === 'ECONNABORTED') {
+      errorMsg = 'El servidor no respondió a tiempo';
+    } else if (error.response) {
+      switch (error.response.status) {
+        case 401: errorMsg = 'No autorizado - Token inválido o expirado'; break;
+        case 404: errorMsg = 'Ruta no encontrada o método bloqueado (404)'; break;
+        case 405: errorMsg = 'Método no permitido (405). Prueba con POST o habilita PUT en el hosting'; break;
+        case 422: errorMsg = error.response.data.message || 'Datos de validación incorrectos'; break;
+        default:  errorMsg = error.response.data?.message || `Error del servidor (${error.response.status})`;
+      }
+    } else if (error.message?.toLowerCase().includes('token')) {
+      errorMsg = 'Problema de autenticación - Vuelve a iniciar sesión';
+    }
+    setError(errorMsg);
+    console.error('Detalles del error:', {
+      message: error.message,
+      status: error.response?.status,
+      response: error.response?.data,
+      config: error.config
+    });
+  }
+
+  /** ====== Confirmación de importación (con fallback PUT→POST) ====== */
   const handleConfirmImport = async () => {
     if (!importPreview) {
       setError('No hay datos de importación para confirmar');
@@ -519,20 +543,35 @@ const Consulta = () => {
         eliminar: importPreview.eliminar.map(item => ({ codigo: item.codigo || item }))
       };
 
-      const response = await axios.put(
-        `${API_BASE}/productos/import-confirm`,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            Accept: 'application/json'
-          },
-          timeout: 30000
-        }
-      );
+      const cfg = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        timeout: 30000
+      };
 
-      if (!response.data) {
+      // 1) Intento con PUT
+      let response;
+      try {
+        response = await axios.put(`${API_BASE}/productos/import-confirm`, payload, cfg);
+      } catch (err) {
+        // 2) Si 404/405, fallback a POST (posible bloqueo de PUT en hosting)
+        if (err?.response && [404, 405].includes(err.response.status)) {
+          try {
+            response = await axios.post(`${API_BASE}/productos/import-confirm`, payload, cfg);
+          } catch (err2) {
+            handleImportError(err2);
+            return;
+          }
+        } else {
+          handleImportError(err);
+          return;
+        }
+      }
+
+      if (!response?.data) {
         throw new Error('La respuesta del servidor está vacía');
       }
 
@@ -548,35 +587,7 @@ const Consulta = () => {
       await fetchProductos(1);
 
     } catch (error) {
-      let errorMsg = 'Error al confirmar importación';
-
-      if (error.code === 'ECONNABORTED') {
-        errorMsg = 'El servidor no respondió a tiempo';
-      } else if (error.response) {
-        switch (error.response.status) {
-          case 401:
-            errorMsg = 'No autorizado - Token inválido o expirado';
-            break;
-          case 404:
-            errorMsg = 'El producto no existe (404)';
-            break;
-          case 422:
-            errorMsg = error.response.data.message || 'Datos de validación incorrectos';
-            break;
-          default:
-            errorMsg = error.response.data?.message || `Error del servidor (${error.response.status})`;
-        }
-      } else if (error.message.includes('token')) {
-        errorMsg = 'Problema de autenticación - Vuelve a iniciar sesión';
-      }
-
-      setError(errorMsg);
-      console.error('Detalles del error:', {
-        message: error.message,
-        response: error.response?.data,
-        config: error.config
-      });
-
+      handleImportError(error);
     } finally {
       setImporting(false);
       setImportFile(null);
@@ -1066,7 +1077,6 @@ const Consulta = () => {
                       </thead>
                       <tbody>
                         {importPreview.actualizar.map((producto, index) => {
-                          // Campos modificados: si backend manda lista, úsala; si no, derivamos del objeto "datos" o "nuevo"
                           const clavesNuevas = Object.keys(producto.datos || producto.nuevo || {});
                           const cambios = producto.campos_modificados?.length
                             ? producto.campos_modificados
@@ -1075,7 +1085,6 @@ const Consulta = () => {
                           return cambios.length > 0 ? (
                             cambios.map((campo, i) => {
                               const valActual = producto.actual ? producto.actual[campo] : undefined;
-                              // 🔧 Corrección 2: tomar primero datos[campo], luego nuevo[campo], luego propio
                               const valNuevo  = (producto.datos?.[campo] ?? producto.nuevo?.[campo] ?? producto[campo]);
 
                               return (

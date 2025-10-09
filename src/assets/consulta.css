@@ -87,8 +87,11 @@ body {
   padding: 16px;
   margin-bottom: 12px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  /* 🔧 Alineación: info a la izquierda, botones centrados */
+  flex-direction: column;       /* texto arriba, botones abajo */
+  align-items: flex-start;      /* contenido pegado a la izquierda */
+  text-align: left;             /* asegura texto a la izquierda */
+  gap: 12px;                    /* separación entre bloques */
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   border: 2px solid #ddd;
   transition: border 0.3s ease;
@@ -96,6 +99,34 @@ body {
 
 .consulta-layout .product-card.inactive {
   border: 2px solid #f90019;
+}
+
+/* 🔧 Info siempre a la izquierda y sin desbordes */
+.product-info,
+.product-info p,
+.product-info span,
+.product-info div {
+  text-align: left !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.product-card,
+.product-info {
+  min-width: 0;
+}
+
+.product-card {
+  max-width: 100%;
+}
+
+/* 🔧 Botonera centrada (sin estirarse a todo el ancho) */
+.card-actions {
+  align-self: center;           /* centra el grupo de botones */
+  display: flex;
+  justify-content: center;
+  gap: .5rem;
+  flex-wrap: wrap;
 }
 
 /* ✅ Botones del contenido */
@@ -252,24 +283,6 @@ tr:hover {
   background-color: rgba(0, 0, 0, 0.212);
 }
 
-/* Evitar que los cuadros se salgan del contenedor */
-.product-info p,
-.product-info span,
-.product-info div {
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-.product-card,
-.product-info {
-  min-width: 0;
-}
-
-.product-card {
-  max-width: 100%;
-}
-
-
 /* ✅ Responsive */
 @media (max-width: 768px) {
   th, td {
@@ -340,7 +353,7 @@ tr:hover {
   z-index: 1040;       /* Por encima del contenido */
   border-radius: 999px;
   padding: 6px 14px !important;       /* Override del .btn global */
-  background: #4b2eff !important;     /* Puedes cambiarlo si quieres otro color */
+  background: #4b2eff !important;     /* (sin cambios de color) */
   border: none !important;
   color: #fff !important;
   box-shadow: 0 6px 18px rgba(0,0,0,0.15);
@@ -359,3 +372,4 @@ tr:hover {
     padding: 6px 12px !important;
   }
 }
+

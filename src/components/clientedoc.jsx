@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
-  Container, Navbar, Nav, Button, Row, Col, Card, Form, Spinner, Modal
+  Container, Navbar, Nav, Button, Row, Col, Card, Form, Spinner, Modal, InputGroup
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/clientedoc.css';
@@ -237,14 +237,29 @@ const Clientedoc = () => {
                   Documentos PDF
                 </h2>
 
-                {/* Buscador */}
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por nombre"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="mb-3"
-                />
+                {/* 🔎 Barra de búsqueda igual a Capacitacion.jsx */}
+                <Row className="g-3 align-items-end mb-3">
+                  <Col xs={12} md={6} lg={5}>
+                    <Form.Label className="fw-semibold">Buscar dentro de Documentos:</Form.Label>
+                    <InputGroup>
+                      <Form.Control
+                        type="text"
+                        placeholder="Escribe el nombre del documento…"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                      {searchTerm && (
+                        <Button
+                          variant="outline-secondary"
+                          onClick={() => setSearchTerm('')}
+                          title="Limpiar"
+                        >
+                          <i className="bi bi-x-lg" />
+                        </Button>
+                      )}
+                    </InputGroup>
+                  </Col>
+                </Row>
 
                 {loading && <div className="text-center mb-3">Cargando documentos...</div>}
 
