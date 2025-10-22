@@ -1,5 +1,5 @@
 // src/components/admin.jsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Button, Row, Col, Card } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/admin.css';
@@ -21,7 +21,31 @@ const Admin = () => {
   const handleDocumentos = () => navigate('/documentos');
   const handleVencimiento = () => navigate('/vencimiento-admin'); // ✅ Redirige a la vista correcta
 
-  // Estilos de tarjetas
+  // ✅ Recargar esta misma vista al hacer clic en el título
+  const handleBack = () => {
+    navigate(0);
+  };
+
+  // ====== Reloj y fecha en vivo ======
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Formato de hora y fecha
+  const horaFormateada = now.toLocaleTimeString('es-CO', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const fechaFormateada = now.toLocaleDateString('es-CO', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  // ====== Estilos de tarjetas ======
   const cardStyle = {
     border: '1px solid rgba(0,0,0,0.06)',
     borderRadius: 16,
@@ -55,11 +79,31 @@ const Admin = () => {
               height="40"
               className="d-inline-block align-top me-2"
             />
-            <span className="admin-title">BIBLIOTECALFH</span>
+            <span
+              className="usuarios-title"
+              role="link"
+              style={{ cursor: 'pointer' }}
+              title="Recargar panel de administración"
+              onClick={handleBack}
+            >
+              BIBLIOTECALFH
+            </span>
           </Navbar.Brand>
-          <Button onClick={handleLogout} className="logout-button">
-            <i className="bi bi-box-arrow-right me-1"></i> Salir
-          </Button>
+
+          <div className="d-flex align-items-center gap-3">
+            {/* 🕒 Fecha y hora actual (blanco) */}
+            <div
+              className="fw-bold text-end"
+              style={{ color: 'white', fontSize: '0.9rem', lineHeight: '1.2' }}
+            >
+              <div>{fechaFormateada}</div>
+              <div><i className="bi bi-clock me-1"></i>{horaFormateada}</div>
+            </div>
+
+            <Button onClick={handleLogout} className="logout-button">
+              <i className="bi bi-box-arrow-right me-1"></i> Salir
+            </Button>
+          </div>
         </Container>
       </Navbar>
 
@@ -72,7 +116,10 @@ const Admin = () => {
               <Card className="border-0 h-100" style={cardStyle}>
                 <Card.Body className="d-flex flex-column">
                   <div className="d-flex align-items-start mb-3">
-                    <div style={iconWrap('rgba(13,110,253,0.12)', '#0d6efd')} className="me-3">
+                    <div
+                      style={iconWrap('rgba(13,110,253,0.12)', '#0d6efd')}
+                      className="me-3"
+                    >
                       <i className="bi bi-people"></i>
                     </div>
                     <div>
@@ -99,7 +146,10 @@ const Admin = () => {
               <Card className="border-0 h-100" style={cardStyle}>
                 <Card.Body className="d-flex flex-column">
                   <div className="d-flex align-items-start mb-3">
-                    <div style={iconWrap('rgba(25,135,84,0.12)', '#198754')} className="me-3">
+                    <div
+                      style={iconWrap('rgba(25,135,84,0.12)', '#198754')}
+                      className="me-3"
+                    >
                       <i className="bi bi-search"></i>
                     </div>
                     <div>
@@ -126,7 +176,10 @@ const Admin = () => {
               <Card className="border-0 h-100" style={cardStyle}>
                 <Card.Body className="d-flex flex-column">
                   <div className="d-flex align-items-start mb-3">
-                    <div style={iconWrap('rgba(13,202,240,0.15)', '#0dcaf0')} className="me-3">
+                    <div
+                      style={iconWrap('rgba(13,202,240,0.15)', '#0dcaf0')}
+                      className="me-3"
+                    >
                       <i className="bi bi-file-earmark-text"></i>
                     </div>
                     <div>
@@ -148,12 +201,15 @@ const Admin = () => {
               </Card>
             </Col>
 
-            {/* Vencimiento (nueva) */}
+            {/* Vencimiento */}
             <Col xs={12} md={6} lg={3}>
               <Card className="border-0 h-100" style={cardStyle}>
                 <Card.Body className="d-flex flex-column">
                   <div className="d-flex align-items-start mb-3">
-                    <div style={iconWrap('rgba(255,193,7,0.18)', '#ffc107')} className="me-3">
+                    <div
+                      style={iconWrap('rgba(255,193,7,0.18)', '#ffc107')}
+                      className="me-3"
+                    >
                       <i className="bi bi-hourglass-split"></i>
                     </div>
                     <div>
@@ -183,7 +239,9 @@ const Admin = () => {
         <Container fluid>
           <Row className="py-3">
             <Col md={12} className="text-center">
-              <p className="mb-0">© 2025 La Farmacia Homeopática - Más alternativas, más servicio.</p>
+              <p className="mb-0">
+                © 2025 La Farmacia Homeopática - Más alternativas, más servicio.
+              </p>
             </Col>
           </Row>
         </Container>

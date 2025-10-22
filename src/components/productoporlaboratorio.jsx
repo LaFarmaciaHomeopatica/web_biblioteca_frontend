@@ -1,3 +1,4 @@
+// src/components/ProductoPorLaboratorio.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
@@ -79,6 +80,14 @@ const ProductoPorLaboratorio = () => {
     const handleViewClick = (producto) => {
         setViewingProduct(producto);
         setShowViewModal(true);
+    };
+
+    // ✅ Controladores de paginación
+    const handlePageChange = (newPage) => {
+        if (!loading && newPage >= 1 && newPage <= lastPage) {
+            setCurrentPage(newPage);
+            fetchProductos(newPage);
+        }
     };
 
     return (
@@ -172,6 +181,7 @@ const ProductoPorLaboratorio = () => {
                                             <p><strong>Nombre:</strong> {producto.nombre}</p>
                                             <p><strong>Laboratorio:</strong> {producto.laboratorio}</p>
                                             <p><strong>Precio Público con IVA:</strong> ${formatearPrecio(producto.precio_publico)}</p>
+                                            <p><strong>Precio Médico con IVA:</strong> ${formatearPrecio(producto.precio_medico)}</p>
                                         </div>
                                         <div className="card-actions">
                                             <Button size="sm" variant="info" onClick={() => handleViewClick(producto)}>Ver</Button>
@@ -183,13 +193,22 @@ const ProductoPorLaboratorio = () => {
                             )}
                         </div>
 
-                        {/* PAGINACIÓN */}
+                        {/* ✅ PAGINACIÓN (idéntica a documentos.jsx) */}
                         {lastPage > 1 && (
-                            <div className="pagination-wrapper mt-3">
+                            <div className="pagination-wrapper mt-4 d-flex justify-content-center gap-2">
                                 <button
                                     className="pagination-btn"
-                                    onClick={() => setCurrentPage(currentPage - 1)}
-                                    disabled={currentPage === 1}
+                                    onClick={() => handlePageChange(1)}
+                                    disabled={currentPage === 1 || loading}
+                                    title="Primera página"
+                                >
+                                    <i className="bi bi-skip-backward-fill"></i>
+                                </button>
+                                <button
+                                    className="pagination-btn"
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1 || loading}
+                                    title="Página anterior"
                                 >
                                     <i className="bi bi-chevron-left"></i>
                                 </button>
@@ -198,10 +217,19 @@ const ProductoPorLaboratorio = () => {
                                 </span>
                                 <button
                                     className="pagination-btn"
-                                    onClick={() => setCurrentPage(currentPage + 1)}
-                                    disabled={currentPage === lastPage}
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === lastPage || loading}
+                                    title="Página siguiente"
                                 >
                                     <i className="bi bi-chevron-right"></i>
+                                </button>
+                                <button
+                                    className="pagination-btn"
+                                    onClick={() => handlePageChange(lastPage)}
+                                    disabled={currentPage === lastPage || loading}
+                                    title="Última página"
+                                >
+                                    <i className="bi bi-skip-forward-fill"></i>
                                 </button>
                             </div>
                         )}
@@ -209,7 +237,7 @@ const ProductoPorLaboratorio = () => {
                 </Card>
             </Container>
 
-            {/* MODAL DETALLES – exactamente igual al estilo profesional anterior */}
+            {/* MODAL DETALLES */}
             <Modal
                 show={showViewModal}
                 onHide={() => setShowViewModal(false)}
@@ -254,7 +282,7 @@ const ProductoPorLaboratorio = () => {
                             <Modal.Body style={{ background: '#f6f8fb' }}>
                                 {viewingProduct && (
                                     <Row className="g-3">
-                                        {/* Panel izquierdo: datos generales */}
+                                        {/* Panel izquierdo */}
                                         <Col md={6}>
                                             <Card className="h-100 shadow-sm border-0">
                                                 <Card.Body className="p-3">

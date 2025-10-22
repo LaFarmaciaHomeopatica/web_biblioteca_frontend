@@ -454,7 +454,7 @@ const Consulta = () => {
       processedData.crear = crearFiltrado;
 
       // Si todo vino con errores, mostramos error global
-      if (processedData.errores.length > 0 && processedData.errores.length === processedData.metadata.total_filas) {
+      if (processedData.errores.length > 0 && processedData.metadata.total_filas && processedData.errores.length === processedData.metadata.total_filas) {
         throw new Error('El archivo contiene errores en todas las filas. Revise el formato.');
       }
 
@@ -612,7 +612,7 @@ const Consulta = () => {
         <Container fluid>
           <Navbar.Brand className="d-flex align-items-center">
             <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
-            <span
+          <span
               className="consulta-title"
               role="link"
               style={{ cursor: 'pointer'}}
@@ -709,11 +709,26 @@ const Consulta = () => {
             </div>
 
             {lastPage > 1 && (
-              <div className="pagination-wrapper mt-3">
+              <div className="pagination-wrapper mt-3 d-flex justify-content-center align-items-center gap-2">
+                {/* ———— MISMO DISEÑO QUE documentos.jsx ———— */}
+                {/* Primera página */}
+                <button
+                  className={`pagination-btn ${loading ? 'opacity-50' : ''}`}
+                  onClick={() => fetchProductos(1)}
+                  disabled={currentPage === 1 || loading}
+                  aria-label="Primera página"
+                  title="Primera página"
+                >
+                  <i className="bi bi-skip-backward-fill"></i>
+                </button>
+
+                {/* Anterior */}
                 <button
                   className={`pagination-btn ${loading ? 'opacity-50' : ''}`}
                   onClick={() => fetchProductos(currentPage - 1)}
                   disabled={currentPage === 1 || loading}
+                  aria-label="Página anterior"
+                  title="Página anterior"
                 >
                   <i className="bi bi-chevron-left"></i>
                 </button>
@@ -726,12 +741,26 @@ const Consulta = () => {
                   )}
                 </span>
 
+                {/* Siguiente */}
                 <button
                   className={`pagination-btn ${loading ? 'opacity-50' : ''}`}
                   onClick={() => fetchProductos(currentPage + 1)}
                   disabled={currentPage === lastPage || loading}
+                  aria-label="Página siguiente"
+                  title="Página siguiente"
                 >
                   <i className="bi bi-chevron-right"></i>
+                </button>
+
+                {/* Última página */}
+                <button
+                  className={`pagination-btn ${loading ? 'opacity-50' : ''}`}
+                  onClick={() => fetchProductos(lastPage)}
+                  disabled={currentPage === lastPage || loading}
+                  aria-label="Última página"
+                  title="Última página"
+                >
+                  <i className="bi bi-skip-forward-fill"></i>
                 </button>
               </div>
             )}

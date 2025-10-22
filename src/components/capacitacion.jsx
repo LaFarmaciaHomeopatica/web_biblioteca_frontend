@@ -118,6 +118,14 @@ const Capacitacion = () => {
     navigate('/');
   };
 
+  // ✅ MISMA API DE PAGINACIÓN QUE EN documentos.jsx
+  const handlePageChange = (newPage) => {
+    if (!loading && newPage >= 1 && newPage <= lastPage) {
+      setCurrentPage(newPage);
+      fetchDocumentos(newPage);
+    }
+  };
+
   return (
     <div className="capacitacion-layout">
       {/* HEADER */}
@@ -175,16 +183,17 @@ const Capacitacion = () => {
                   Documentos - Capacitación
                 </h2>
 
-                {/* 🔎 Barra de búsqueda (filtra por nombre dentro de la categoría) */}
+                {/* 🔎 Barra de búsqueda (ancho completo) */}
                 <Row className="g-3 align-items-end mb-3">
-                  <Col xs={12} md={6} lg={5}>
+                  <Col xs={12} md={12} lg={12}>
                     <Form.Label className="fw-semibold">Buscar dentro de Capacitación:</Form.Label>
-                    <InputGroup>
+                    <InputGroup className="w-100">
                       <Form.Control
                         type="text"
                         placeholder="Escribe el nombre del documento…"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-100"
                       />
                       {searchTerm && (
                         <Button
@@ -231,13 +240,22 @@ const Capacitacion = () => {
                   )}
                 </div>
 
-                {/* Paginación (del conjunto base Capacitacion) */}
+                {/* ✅ Paginación con el MISMO DISEÑO que documentos.jsx */}
                 {lastPage > 1 && (
-                  <div className="pagination-wrapper mt-3 d-flex justify-content-center">
+                  <div className="pagination-wrapper mt-4 d-flex justify-content-center gap-2">
                     <button
                       className="pagination-btn"
-                      onClick={() => fetchDocumentos(currentPage - 1)}
+                      onClick={() => handlePageChange(1)}
                       disabled={currentPage === 1 || loading}
+                      title="Primera página"
+                    >
+                      <i className="bi bi-skip-backward-fill"></i>
+                    </button>
+                    <button
+                      className="pagination-btn"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1 || loading}
+                      title="Página anterior"
                     >
                       <i className="bi bi-chevron-left"></i>
                     </button>
@@ -250,10 +268,19 @@ const Capacitacion = () => {
                     </span>
                     <button
                       className="pagination-btn"
-                      onClick={() => fetchDocumentos(currentPage + 1)}
-                      disabled={currentPage === lastPage || loading}
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={lastPage === currentPage || loading}
+                      title="Página siguiente"
                     >
                       <i className="bi bi-chevron-right"></i>
+                    </button>
+                    <button
+                      className="pagination-btn"
+                      onClick={() => handlePageChange(lastPage)}
+                      disabled={lastPage === currentPage || loading}
+                      title="Última página"
+                    >
+                      <i className="bi bi-skip-forward-fill"></i>
                     </button>
                   </div>
                 )}

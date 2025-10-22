@@ -18,6 +18,12 @@ const Cliente = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
 
+  // ✅ Recargar esta misma vista al hacer clic en el título
+  const handleReload = () => {
+    navigate(0);
+    // Alternativa: window.location.reload();
+  };
+
   // ===== Helpers de formato =====
   const formatearPrecio = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '';
@@ -166,7 +172,15 @@ const Cliente = () => {
         <Container fluid>
           <Navbar.Brand className="d-flex align-items-center">
             <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
-            <span className="cliente-title">BIBLIOTECALFH</span>
+            <span
+              className="cliente-title"
+              role="link"
+              style={{ cursor: 'pointer' }}
+              title="Recargar productos"
+              onClick={handleReload}
+            >
+              BIBLIOTECALFH
+            </span>
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="navbarResponsive" />
           <Navbar.Collapse id="navbarResponsive" className="justify-content-end">
@@ -277,23 +291,54 @@ const Cliente = () => {
 
                 {/* Paginación */}
                 {lastPage > 1 && (
-                  <div className="pagination-wrapper mt-3 d-flex justify-content-center">
+                  <div className="pagination-wrapper mt-3 d-flex justify-content-center align-items-center gap-2">
+                    {/* ———— MISMO DISEÑO QUE documentos.jsx ———— */}
+                    {/* Primera página */}
+                    <button
+                      className="pagination-btn"
+                      onClick={() => fetchProductos(1)}
+                      disabled={currentPage === 1 || loading}
+                      aria-label="Primera página"
+                      title="Primera página"
+                    >
+                      <i className="bi bi-skip-backward-fill"></i>
+                    </button>
+
+                    {/* Anterior */}
                     <button
                       className="pagination-btn"
                       onClick={() => fetchProductos(currentPage - 1)}
                       disabled={currentPage === 1 || loading}
+                      aria-label="Página anterior"
+                      title="Página anterior"
                     >
                       <i className="bi bi-chevron-left"></i>
                     </button>
+
                     <span className="pagination-info">
                       {loading ? <Spinner animation="border" size="sm" /> : `${currentPage} / ${lastPage}`}
                     </span>
+
+                    {/* Siguiente */}
                     <button
                       className="pagination-btn"
                       onClick={() => fetchProductos(currentPage + 1)}
                       disabled={currentPage === lastPage || loading}
+                      aria-label="Página siguiente"
+                      title="Página siguiente"
                     >
                       <i className="bi bi-chevron-right"></i>
+                    </button>
+
+                    {/* Última página */}
+                    <button
+                      className="pagination-btn"
+                      onClick={() => fetchProductos(lastPage)}
+                      disabled={currentPage === lastPage || loading}
+                      aria-label="Última página"
+                      title="Última página"
+                    >
+                      <i className="bi bi-skip-forward-fill"></i>
                     </button>
                   </div>
                 )}
@@ -315,89 +360,89 @@ const Cliente = () => {
           const isInactive = selectedProducto?.estado_producto?.toLowerCase() === 'inactivo';
           const headerColor = isInactive ? '#dc3545' : '#0857b3';
 
-          return (
-            <>
-              <Modal.Header
-                closeButton
-                style={{ backgroundColor: headerColor, color: '#fff' }}
-              >
-                <Modal.Title className="d-flex align-items-center gap-2">
-                  Detalles del Producto
-                  {isInactive && (
-                    <span
-                      style={{
-                        background: 'rgba(255,255,255,0.95)',
-                        color: '#dc3545',
-                        border: '1px solid rgba(255,255,255,0.65)',
-                        padding: '4px 10px',
-                        borderRadius: '999px',
-                        fontWeight: 700,
-                        fontSize: '0.85rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                      title="Este producto está inactivo"
-                    >
-                      <i className="bi bi-slash-circle"></i>
-                      INACTIVO
-                    </span>
-                  )}
-                </Modal.Title>
-              </Modal.Header>
-
-              <Modal.Body style={{ background: '#f6f8fb' }}>
-                {selectedProducto && (
-                  <Row className="g-3">
-                    {/* Panel izquierdo: datos generales */}
-                    <Col md={6}>
-                      <Card className="h-100 shadow-sm border-0">
-                        <Card.Body className="p-3">
-                          <div className="pe-md-2" style={{ fontSize: '0.98rem' }}>
-                            <p><strong>Nombre:</strong> {selectedProducto.nombre}</p>
-                            <p><strong>Estado Producto:</strong> {selectedProducto.estado_producto}</p>
-                            <p><strong>Precio Público con IVA:</strong> {mostrarPrecio(selectedProducto.precio_publico)}</p>
-                            <p><strong>Precio Médico con IVA:</strong> {mostrarPrecio(selectedProducto.precio_medico)}</p>
-                            <p><strong>IVA:</strong> {formatearIVA(selectedProducto.iva)}</p>
-                            <p><strong>Requiere Fórmula Médica:</strong> {selectedProducto.formula_medica}</p>
-                            <p><strong>Laboratorio:</strong> {selectedProducto.laboratorio}</p>
-                            <p><strong>Categoría:</strong> {selectedProducto.categoria}</p>
-                            <p><strong>Estado Registro:</strong> {selectedProducto.estado_registro}</p>
-                            <p><strong>Fecha Vencimiento registro:</strong> {selectedProducto.fecha_vencimiento}</p>
-                            <p><strong>Registro Sanitario:</strong> {selectedProducto.registro_sanitario}</p>
-                            <p className="mb-0"><strong>Código:</strong> {selectedProducto.codigo}</p>
-                          </div>
-                        </Card.Body>
-                      </Card>
-                    </Col>
-
-                    {/* Panel derecho: DAVID */}
-                    <Col md={6}>
-                      <Card className="h-100 shadow-sm border-0">
-                        <Card.Header className="bg-white" style={{ borderBottom: '1px solid #eef1f5' }}>
-                          <h5 className="mb-0 d-flex align-items-center gap-2">
-                            <i className="bi bi-journal-text"></i> DAVID
-                          </h5>
-                        </Card.Header>
-                        <Card.Body className="p-3">
-                          <div
-                            style={{
-                              whiteSpace: 'pre-wrap',
-                              lineHeight: 1.6,
-                              maxHeight: '48vh',
-                              overflowY: 'auto'
-                            }}
-                          >
-                            {selectedProducto.david || <span className="text-muted">Sin información</span>}
-                          </div>
-                        </Card.Body>
-                      </Card>
-                    </Col>
-                  </Row>
+        return (
+          <>
+            <Modal.Header
+              closeButton
+              style={{ backgroundColor: headerColor, color: '#fff' }}
+            >
+              <Modal.Title className="d-flex align-items-center gap-2">
+                Detalles del Producto
+                {isInactive && (
+                  <span
+                    style={{
+                      background: 'rgba(255,255,255,0.95)',
+                      color: '#dc3545',
+                      border: '1px solid rgba(255,255,255,0.65)',
+                      padding: '4px 10px',
+                      borderRadius: '999px',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    title="Este producto está inactivo"
+                  >
+                    <i className="bi bi-slash-circle"></i>
+                    INACTIVO
+                  </span>
                 )}
-              </Modal.Body>
-            </>
-          );
+              </Modal.Title>
+            </Modal.Header>
+
+            <Modal.Body style={{ background: '#f6f8fb' }}>
+              {selectedProducto && (
+                <Row className="g-3">
+                  {/* Panel izquierdo: datos generales */}
+                  <Col md={6}>
+                    <Card className="h-100 shadow-sm border-0">
+                      <Card.Body className="p-3">
+                        <div className="pe-md-2" style={{ fontSize: '0.98rem' }}>
+                          <p><strong>Nombre:</strong> {selectedProducto.nombre}</p>
+                          <p><strong>Estado Producto:</strong> {selectedProducto.estado_producto}</p>
+                          <p><strong>Precio Público con IVA:</strong> {mostrarPrecio(selectedProducto.precio_publico)}</p>
+                          <p><strong>Precio Médico con IVA:</strong> {mostrarPrecio(selectedProducto.precio_medico)}</p>
+                          <p><strong>IVA:</strong> {formatearIVA(selectedProducto.iva)}</p>
+                          <p><strong>Requiere Fórmula Médica:</strong> {selectedProducto.formula_medica}</p>
+                          <p><strong>Laboratorio:</strong> {selectedProducto.laboratorio}</p>
+                          <p><strong>Categoría:</strong> {selectedProducto.categoria}</p>
+                          <p><strong>Estado Registro:</strong> {selectedProducto.estado_registro}</p>
+                          <p><strong>Fecha Vencimiento registro:</strong> {selectedProducto.fecha_vencimiento}</p>
+                          <p><strong>Registro Sanitario:</strong> {selectedProducto.registro_sanitario}</p>
+                          <p className="mb-0"><strong>Código:</strong> {selectedProducto.codigo}</p>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+
+                  {/* Panel derecho: DAVID */}
+                  <Col md={6}>
+                    <Card className="h-100 shadow-sm border-0">
+                      <Card.Header className="bg-white" style={{ borderBottom: '1px solid #eef1f5' }}>
+                        <h5 className="mb-0 d-flex align-items-center gap-2">
+                          <i className="bi bi-journal-text"></i> DAVID
+                        </h5>
+                      </Card.Header>
+                      <Card.Body className="p-3">
+                        <div
+                          style={{
+                            whiteSpace: 'pre-wrap',
+                            lineHeight: 1.6,
+                            maxHeight: '48vh',
+                            overflowY: 'auto'
+                          }}
+                        >
+                          {selectedProducto.david || <span className="text-muted">Sin información</span>}
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                </Row>
+              )}
+            </Modal.Body>
+          </>
+        );
         })()}
       </Modal>
 

@@ -49,11 +49,17 @@ const currencyCO = (v) => {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
 };
 
+/**
+ * ✅ IVA como 0.19% (consistente con la vista cliente)
+ * - Si llega 0.19 → "0.19%"
+ * - Si llega 19    → "0.19%" (normaliza dividiendo entre 100)
+ */
 const percentCO = (v) => {
   if (v === null || v === undefined || v === '') return '-';
-  const n = Number(v);
-  if (Number.isNaN(n)) return String(v);
-  return `${(n * 100).toFixed(0)}%`;
+  const nRaw = Number(String(v).replace(',', '.'));
+  if (Number.isNaN(nRaw)) return String(v);
+  const n = nRaw > 1 ? nRaw / 100 : nRaw; // 19 -> 0.19
+  return `${n.toFixed(2)}%`;
 };
 
 function VencimientoAdmin() {
