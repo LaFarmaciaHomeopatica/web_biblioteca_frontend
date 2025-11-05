@@ -1,5 +1,5 @@
 // src/components/documentos.jsx
-import React, { useState, useEffect, useRef, useCallback} from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
   Container, Navbar, Button, Spinner, Card, Modal, Form, ProgressBar,
@@ -13,11 +13,10 @@ import logo from '../assets/logo.jpeg';
 /* =========================
    API / ORIGEN
    ========================= */
-const ORIGIN     = window.location.origin;
-const API_BASE   = process.env.REACT_APP_API_URL || `${ORIGIN}/backend/api`;
+const ORIGIN = window.location.origin;
+const API_BASE = process.env.REACT_APP_API_URL || `${ORIGIN}/backend/api`;
 const FILE_PROXY = `${API_BASE}/documentos/stream`;   // PDFs
-const VIDEO_PROXY= `${API_BASE}/videos/stream`;       // 🎥 videos
-
+const VIDEO_PROXY = `${API_BASE}/videos/stream`;       // 🎥 videos
 
 // Toma la mejor "ruta" posible desde el objeto (documento o video)
 const pickRuta = (obj) => {
@@ -75,6 +74,19 @@ api.interceptors.request.use((cfg) => {
   return cfg;
 });
 
+/* =========================
+   Helper local de trazabilidad
+   ========================= */
+async function logAccion(accion) {
+  try {
+    await api.post('/trazabilidad', { accion });
+  } catch (e) {
+    // No rompemos el flujo si falla la traza
+    // eslint-disable-next-line no-console
+    console.warn('No se pudo registrar trazabilidad:', e?.response?.data || e?.message);
+  }
+}
+
 const Documentos = () => {
   const navigate = useNavigate();
 
@@ -127,11 +139,11 @@ const Documentos = () => {
   // ====== Modales bonitos de error/éxito ======
   const [errorModal, setErrorModal] = useState({ show: false, title: '', message: '' });
   const openErrorModal = (title, message) => setErrorModal({ show: true, title, message });
-  const closeErrorModal = () => setErrorModal({ show: false, message: '' });
+  const closeErrorModal = () => setErrorModal({ show: false, title: '', message: '' });
 
   const [successModal, setSuccessModal] = useState({ show: false, title: '', message: '' });
   const openSuccessModal = (title, message) => setSuccessModal({ show: true, title, message });
-  const closeSuccessModal = () => setSuccessModal({ show: false,message: '' });
+  const closeSuccessModal = () => setSuccessModal({ show: false, title: '', message: '' });
 
   // Cancelación de requests
   const cancelTokenSourceRef = useRef(null);
@@ -159,6 +171,7 @@ const Documentos = () => {
         if (!axios.isCancel(err)) {
           const msg = err?.response?.data?.message || err?.message || 'Error al cargar los documentos';
           openErrorModal('Error al cargar', msg);
+          // eslint-disable-next-line no-console
           console.error('Documentos API error:', err?.response?.data || err);
         }
       } finally {
@@ -191,6 +204,7 @@ const Documentos = () => {
         if (!axios.isCancel(err)) {
           const msg = err?.response?.data?.message || err?.message || 'Error al cargar los videos';
           openErrorModal('Error al cargar', msg);
+          // eslint-disable-next-line no-console
           console.error('Videos API error:', err?.response?.data || err);
         }
       } finally {
@@ -269,6 +283,10 @@ const Documentos = () => {
         timeout: 120000
       });
 
+      // ✅ Trazabilidad
+      const nombres = selectedFilesDocs.map(f => f.name).join(', ');
+      await logAccion(`Subió documento(s): ${nombres}`);
+
       openSuccessModal('Documentos subidos', `${selectedFilesDocs.length} documento(s) subido(s) correctamente.`);
       setSelectedFilesDocs([]);
       setShowModalUploadDoc(false);
@@ -279,6 +297,7 @@ const Documentos = () => {
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Error al subir los documentos';
       openErrorModal('Error al subir', msg);
+      // eslint-disable-next-line no-console
       console.error('Upload docs error:', err?.response?.data || err);
     } finally {
       setLoading(false);
@@ -317,6 +336,10 @@ const Documentos = () => {
         timeout: 180000
       });
 
+      // ✅ Trazabilidad
+      const nombres = selectedFilesVids.map(f => f.name).join(', ');
+      await logAccion(`Subió video(s): ${nombres}`);
+
       openSuccessModal('Videos subidos', `${selectedFilesVids.length} video(s) subido(s) correctamente.`);
       setSelectedFilesVids([]);
       setShowModalUploadVid(false);
@@ -327,6 +350,7 @@ const Documentos = () => {
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Error al subir los videos';
       openErrorModal('Error al subir', msg);
+      // eslint-disable-next-line no-console
       console.error('Upload videos error:', err?.response?.data || err);
     } finally {
       setLoading(false);
@@ -355,12 +379,20 @@ const Documentos = () => {
     try {
       if (itemToDelete.tipo === 'doc') {
         await api.delete(`/documentos/${itemToDelete.id}`);
+
+        // ✅ Trazabilidad
+        await logAccion(`Eliminó documento ID ${itemToDelete.id}: ${itemToDelete.nombre}`);
+
         openSuccessModal('Documento eliminado', `"${itemToDelete.nombre}" se eliminó correctamente.`);
         const next = docCurrentPage > 1 && documentos.length === 1 ? docCurrentPage - 1 : docCurrentPage;
         setDocCurrentPage(next);
         await fetchDocumentos(next, searchDoc);
       } else {
         await api.delete(`/videos/${itemToDelete.id}`);
+
+        // ✅ Trazabilidad
+        await logAccion(`Eliminó video ID ${itemToDelete.id}: ${itemToDelete.nombre}`);
+
         openSuccessModal('Video eliminado', `"${itemToDelete.nombre}" se eliminó correctamente.`);
         const next = vidCurrentPage > 1 && videos.length === 1 ? vidCurrentPage - 1 : vidCurrentPage;
         setVidCurrentPage(next);
@@ -369,6 +401,7 @@ const Documentos = () => {
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Error al eliminar';
       openErrorModal('Error al eliminar', msg);
+      // eslint-disable-next-line no-console
       console.error('Delete error:', err?.response?.data || err);
     } finally {
       setShowDeleteModal(false);
@@ -401,10 +434,18 @@ const Documentos = () => {
     try {
       if (editingItem.tipo === 'doc') {
         await api.put(`/documentos/${editingItem.id}`, { nombre: newName.trim() });
+
+        // ✅ Trazabilidad
+        await logAccion(`Renombró documento ID ${editingItem.id} a: "${newName.trim()}"`);
+
         openSuccessModal('Nombre actualizado', 'El documento se renombró correctamente.');
         await fetchDocumentos(docCurrentPage, searchDoc);
       } else {
         await api.put(`/videos/${editingItem.id}`, { nombre: newName.trim() });
+
+        // ✅ Trazabilidad
+        await logAccion(`Renombró video ID ${editingItem.id} a: "${newName.trim()}"`);
+
         openSuccessModal('Nombre actualizado', 'El video se renombró correctamente.');
         await fetchVideos(vidCurrentPage, searchVid);
       }
@@ -412,6 +453,7 @@ const Documentos = () => {
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Error al actualizar el nombre';
       openErrorModal('Error al actualizar', msg);
+      // eslint-disable-next-line no-console
       console.error('Update error:', err?.response?.data || err);
     } finally {
       setLoading(false);
@@ -472,7 +514,7 @@ const Documentos = () => {
             <span
               className="documentos-title"
               role="link"
-              style={{ cursor: 'pointer'}}
+              style={{ cursor: 'pointer' }}
               title="Ir al panel de administración"
               onClick={() => navigate('/admin')}
             >
@@ -844,7 +886,7 @@ const Documentos = () => {
       </Modal>
 
       {/* MODAL INSTRUCCIONES: DOCUMENTOS */}
-      <Modal show={showDocInstructionsModal} onHide={() => setShowDocInstructionsModal(false)} centered>
+      <Modal show={showDocInstructionsModal} onHide={() => setShowDocInstructionsModal(false)} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Instrucciones para Documentos (PDF)</Modal.Title>
         </Modal.Header>
@@ -854,7 +896,10 @@ const Documentos = () => {
               <h5 className="mb-3 text-primary">Recomendaciones</h5>
               <ul>
                 <li>El archivo debe estar en formato <strong>PDF</strong>.</li>
-                <li>Usa nombres claros y representativos (evita caracteres especiales).</li>
+                <li>Nombre de los archivos en mayúscula sostenida</li>
+                <li>Nomenclatura de archivos:</li>
+                <li>- Ficha técnica: FT Nombre lab nombre producto</li>
+                <li>- Registro Sanitario: RS Nombre lab nombre producto</li>
                 <li>Si quieres que el documento aparezca en <strong>Capacitación</strong>, incluye la palabra <code>capacitacion</code> en el nombre del archivo.</li>
                 <li>Si quieres que el documento aparezca en <strong>Vademécum</strong>, incluye la palabra <code>vademecum</code> en el nombre del archivo.</li>
                 <li>Puedes seleccionar varios archivos a la vez.</li>
@@ -872,7 +917,7 @@ const Documentos = () => {
       </Modal>
 
       {/* MODAL INSTRUCCIONES: VIDEOS */}
-      <Modal show={showVidInstructionsModal} onHide={() => setShowVidInstructionsModal(false)} centered>
+      <Modal show={showVidInstructionsModal} onHide={() => setShowVidInstructionsModal(false)} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Instrucciones para Videos</Modal.Title>
         </Modal.Header>

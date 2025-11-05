@@ -17,6 +17,21 @@ const getAuthHeaders = () => {
   return headers;
 };
 
+// ===== Helper local: trazabilidad =====
+async function logAccion(accion) {
+  try {
+    await axios.post(
+      `${API_BASE}/trazabilidad`,
+      { accion },
+      { headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' } }
+    );
+  } catch (e) {
+    // No rompemos el flujo si falla el log
+    // eslint-disable-next-line no-console
+    console.warn('No se pudo registrar trazabilidad:', e?.response?.data || e?.message);
+  }
+}
+
 const Usuarios = () => {
   const navigate = useNavigate();
 
@@ -190,6 +205,11 @@ const Usuarios = () => {
 
         await axios.put(`${API_BASE}/usuarios/${currentUser.id}`, payload, { headers });
 
+        // ✅ Trazabilidad
+        await logAccion(
+          `Actualizó usuario ID ${currentUser.id} (${payload.email})`
+        );
+
         setUsuarios((prev) =>
           prev.map((u) => (u.id === currentUser.id ? { ...u, ...payload } : u))
         );
@@ -216,6 +236,12 @@ const Usuarios = () => {
           const maxId = Math.max(0, ...usuarios.map((u) => Number(u.id) || 0));
           nuevo.id = maxId + 1;
         }
+
+        // ✅ Trazabilidad
+        await logAccion(
+          `Creó usuario "${payload.name}" (${payload.email}) con ID ${nuevo.id}`
+        );
+
         setUsuarios((prev) => [...prev, nuevo]);
         setShowModal(false);
         openSuccess('Usuario creado', `El usuario "${payload.name}" fue creado correctamente.`);
@@ -262,6 +288,12 @@ const Usuarios = () => {
       await axios.delete(`${API_BASE}/usuarios/${userToDelete.id}`, {
         headers: getAuthHeaders(),
       });
+
+      // ✅ Trazabilidad
+      await logAccion(
+        `Eliminó usuario ID ${userToDelete.id} (${userToDelete.email})`
+      );
+
       setUsuarios((prev) => prev.filter((u) => u.id !== userToDelete.id));
       setShowDeleteModal(false);
       openSuccess('Usuario eliminado', `El usuario "${userToDelete.name}" fue eliminado correctamente.`);

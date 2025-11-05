@@ -1,5 +1,5 @@
+// src/components/consulta.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
 import {
   Container, Navbar, Form, FormControl, Button, Row, Col,
   Card, Modal, Alert, Spinner, Tabs, Tab, Table, Badge
@@ -9,12 +9,14 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/consulta.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
+import api from '../api/api'; // ✅ cliente axios con baseURL y token
 
-/** Base de API (prod y también útil en dev sin proxy) */
-const API_BASE = 'https://bibliotecalfh.com/backend/api';
-const PAGE_SIZE = 20; // Tamaño de página para paginación en cliente (DAVID/INACTIVO)
+const PAGE_SIZE = 20; // Tamaño página para paginación en cliente
 
 const Consulta = () => {
+  const navigate = useNavigate();
+
+  // ======= Helpers de formato =======
   const formatearPrecio = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '';
     const numero = Number(String(valor).replace(/[^0-9.-]/g, ''));
@@ -45,8 +47,7 @@ const Consulta = () => {
     return valor ?? '';
   };
 
-  const navigate = useNavigate();
-
+  // ======= Estado =======
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBy, setFilterBy] = useState('nombre');
   const [productos, setProductos] = useState([]);
@@ -64,9 +65,7 @@ const Consulta = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
 
-  // Import
-  // eslint-disable-next-line no-unused-vars
-  const [importFile, setImportFile] = useState(null);
+  // Import (preview y confirmación)
   const [importPreview, setImportPreview] = useState(null);
   const [importing, setImporting] = useState(false);
   const [showImportPreview, setShowImportPreview] = useState(false);
@@ -75,16 +74,29 @@ const Consulta = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
 
-  // ===== Modal de error “bonito” =====
+  // ===== Modales de error/éxito =====
   const [errorModal, setErrorModal] = useState({ show: false, title: '', message: '' });
-  const openErrorModal = (title, message) => setErrorModal({ show: true, title, message });
+  const openErrorModal = (modalTitle, message) =>
+    setErrorModal({ show: true, title: modalTitle, message });
   const closeErrorModal = () => setErrorModal({ show: false, title: '', message: '' });
 
-  // ===== Modal de éxito “bonito” =====
   const [successModal, setSuccessModal] = useState({ show: false, title: '', message: '' });
-  const openSuccessModal = (title, message) => setSuccessModal({ show: true, title, message });
+  const openSuccessModal = (modalTitle, message) =>
+    setSuccessModal({ show: true, title: modalTitle, message });
   const closeSuccessModal = () => setSuccessModal({ show: false, title: '', message: '' });
 
+  // ======= Trazabilidad (helper) =======
+  const logAction = useCallback(async (accion) => {
+    try {
+      await api.post('/trazabilidad', { accion });
+    } catch (e) {
+      // no bloquea si falla
+      // eslint-disable-next-line no-console
+      console.warn('Trazabilidad no registrada:', e?.response?.data || e?.message);
+    }
+  }, []);
+
+  // ======= Paginación en cliente =======
   const paginarCliente = (lista, page) => {
     const total = lista.length;
     const lp = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -96,17 +108,14 @@ const Consulta = () => {
     setLastPage(lp);
   };
 
+  // ======= Cargar productos =======
   const fetchProductos = useCallback(async (page = 1) => {
     setLoading(true);
     setError(null);
 
     try {
       if (filterBy === 'inactivo') {
-        const token = localStorage.getItem('authToken');
-        if (!token) throw new Error('Necesitas estar autenticado para listar los inactivos.');
-        const resp = await axios.get(`${API_BASE}/productos-all`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-        });
+        const resp = await api.get('/productos-all');
         const all = Array.isArray(resp.data) ? resp.data : [];
         const inactivos = all.filter(
           (p) => String(p?.estado_producto || '').toLowerCase() === 'inactivo'
@@ -116,11 +125,7 @@ const Consulta = () => {
       }
 
       if (filterBy === 'david') {
-        const token = localStorage.getItem('authToken');
-        if (!token) throw new Error('Necesitas estar autenticado para buscar por DAVID.');
-        const resp = await axios.get(`${API_BASE}/productos-all`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-        });
+        const resp = await api.get('/productos-all');
         const all = Array.isArray(resp.data) ? resp.data : [];
         const term = searchTerm.trim().toLowerCase();
 
@@ -132,13 +137,12 @@ const Consulta = () => {
         return;
       }
 
+      // filtros con paginación del backend
       const params = new URLSearchParams({ page: String(page) });
       const cleanSearch = searchTerm.trim();
 
       const validTextFilters = [
-        'nombre', 'codigo', 'categoria',
-        'precio_publico', 'precio_medico',
-        'laboratorio'
+        'nombre', 'codigo', 'categoria', 'precio_publico', 'precio_medico', 'laboratorio'
       ];
 
       if (cleanSearch !== '') {
@@ -147,14 +151,18 @@ const Consulta = () => {
         params.set('search', cleanSearch);
       }
 
-      const url = `${API_BASE}/productos?${params.toString()}`;
-      const response = await axios.get(url, { headers: { Accept: 'application/json' } });
-
-      setProductos(response.data.data || []);
-      setCurrentPage(response.data.current_page);
-      setLastPage(response.data.last_page);
+      const { data } = await api.get(`/productos?${params.toString()}`);
+      setProductos(data.data || []);
+      setCurrentPage(data.current_page || 1);
+      setLastPage(data.last_page || 1);
     } catch (err) {
+      if (err?.response?.status === 401) {
+        openErrorModal('Sesión expirada', 'Tu sesión ha expirado. Inicia sesión nuevamente.');
+        navigate('/');
+        return;
+      }
       setError('Error al cargar los productos');
+      // eslint-disable-next-line no-console
       console.error('Error cargando productos:', err?.response?.data || err?.message);
       setProductos([]);
       setCurrentPage(1);
@@ -162,12 +170,13 @@ const Consulta = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, filterBy]);
+  }, [searchTerm, filterBy, navigate]);
 
   useEffect(() => {
     fetchProductos(currentPage);
   }, [currentPage, fetchProductos]);
 
+  // ======= Handlers básicos =======
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
@@ -209,41 +218,43 @@ const Consulta = () => {
     setShowDeleteModal(true);
   };
 
+  // ======= Eliminar producto + log =======
   const handleConfirmDelete = async () => {
     if (!productToDelete) return;
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) { setError('Sesión no válida. Vuelve a iniciar sesión.'); setLoading(false); return; }
-      await axios.delete(`${API_BASE}/productos/${productToDelete.id}`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
-      });
+      await api.delete(`/productos/${productToDelete.id}`);
 
       openSuccessModal('Producto eliminado', `El producto "${productToDelete.nombre}" fue eliminado correctamente.`);
+      await logAction(`Eliminó el producto ID ${productToDelete.id} (${productToDelete.nombre || productToDelete.codigo || ''})`);
+
       setShowDeleteModal(false);
       setProductToDelete(null);
 
       const nextPage = (productos.length === 1 && currentPage > 1) ? currentPage - 1 : currentPage;
       fetchProductos(nextPage);
     } catch (err) {
+      if (err?.response?.status === 401) {
+        openErrorModal('Sesión expirada', 'Tu sesión ha expirado. Inicia sesión nuevamente.');
+        navigate('/');
+        return;
+      }
       setError('Error al eliminar el producto');
+      // eslint-disable-next-line no-console
       console.error('Delete error:', err?.response?.data || err?.message);
     } finally {
       setLoading(false);
     }
   };
 
+  // ======= Form =======
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  /**
-   * Valida si un código YA existe.
-   * 1) Revisión rápida local (página actual)
-   * 2) Confirmación remota con /productos-all (fuente de verdad)
-   */
+  // ======= Validación de código duplicado =======
   const existeCodigo = async (codigo) => {
     const normalize = (v) => String(v ?? '').trim();
     const code = normalize(codigo);
@@ -255,32 +266,20 @@ const Consulta = () => {
 
     // 2) Confirmación remota
     try {
-      const token = localStorage.getItem('authToken');
-      const headers = { Accept: 'application/json' };
-      if (token) headers.Authorization = `Bearer ${token}`;
-
-      const resAll = await axios.get(`${API_BASE}/productos-all`, { headers });
+      const resAll = await api.get('/productos-all');
       const all = Array.isArray(resAll.data) ? resAll.data : [];
       return all.some(p => normalize(p.codigo) === code);
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.warn('No se pudo confirmar duplicado con productos-all:', e?.response?.data || e?.message);
-      // Si falla la confirmación, asumimos "no existe" para no bloquear al usuario
-      return false;
+      return false; // no bloquear
     }
   };
 
+  // ======= Crear/Actualizar + log =======
   const handleSaveChanges = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) { setError('Sesión no válida. Vuelve a iniciar sesión.'); setLoading(false); return; }
-
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      };
-
       // Normalizar y limpiar formData
       const cleanFormData = Object.fromEntries(
         Object.entries(formData).map(([key, value]) => [
@@ -292,7 +291,7 @@ const Consulta = () => {
         cleanFormData.iva = normalizarIVANumero(cleanFormData.iva);
       }
 
-      // === Validación preventiva SOLO para creación ===
+      // Validación preventiva SOLO para creación
       if (isNewProduct) {
         const dup = await existeCodigo(cleanFormData.codigo);
         if (dup) {
@@ -301,30 +300,36 @@ const Consulta = () => {
             `El código "${cleanFormData.codigo}" ya está registrado. Por favor ingresa uno diferente.`
           );
           setLoading(false);
-          return; // No seguimos con el POST
+          return;
         }
       }
 
-      // Crear o actualizar
       if (isNewProduct) {
-        await axios.post(`${API_BASE}/productos`, cleanFormData, { headers });
+        await api.post('/productos', cleanFormData);
         setShowEditModal(false);
         openSuccessModal('Producto creado', `El producto "${cleanFormData.nombre || cleanFormData.codigo}" se creó correctamente.`);
+        await logAction(`Creó el producto "${cleanFormData.nombre || cleanFormData.codigo}"`);
       } else {
-        await axios.put(`${API_BASE}/productos/${editingProduct.id}`, cleanFormData, { headers });
+        await api.put(`/productos/${editingProduct.id}`, cleanFormData);
         setShowEditModal(false);
         openSuccessModal('Producto actualizado', `El producto "${cleanFormData.nombre || editingProduct?.nombre}" se actualizó correctamente.`);
+        await logAction(`Actualizó el producto ID ${editingProduct.id} (${cleanFormData.nombre || editingProduct?.nombre || editingProduct?.codigo || ''})`);
       }
 
       fetchProductos(currentPage);
-    } catch (error) {
-      console.error('Error guardando producto:', error.response?.data || error.message);
-      if (error.response?.data?.errors) {
-        const errorMsg = Object.values(error.response.data.errors).flat().join(', ');
+    } catch (errorResp) {
+      if (errorResp?.response?.status === 401) {
+        openErrorModal('Sesión expirada', 'Tu sesión ha expirado. Inicia sesión nuevamente.');
+        navigate('/');
+        return;
+      }
+      // eslint-disable-next-line no-console
+      console.error('Error guardando producto:', errorResp?.response?.data || errorResp?.message);
+      if (errorResp?.response?.data?.errors) {
+        const errorMsg = Object.values(errorResp.response.data.errors).flat().join(', ');
         setError(errorMsg);
       } else {
-        // Heurística por si backend devuelve 500 con pista de UNIQUE
-        const body = error.response?.data;
+        const body = errorResp?.response?.data;
         const texto = (typeof body === 'string' ? body : JSON.stringify(body || {})).toLowerCase();
         if (texto.includes('unique') || texto.includes('duplic') || texto.includes('23000')) {
           openErrorModal(
@@ -340,21 +345,14 @@ const Consulta = () => {
     }
   };
 
+  // ======= Exportar Excel + log =======
   const handleExportExcel = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await axios.get(`${API_BASE}/productos-all`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        },
-        params: {
-          search: searchTerm,
-          filterBy: filterBy,
-        },
+      const response = await api.get('/productos-all', {
+        params: { search: searchTerm, filterBy }
       });
 
-      const allProductos = response.data;
+      const allProductos = response.data || [];
 
       const data = allProductos.map(producto => ({
         Código: producto.codigo,
@@ -378,14 +376,20 @@ const Consulta = () => {
       XLSX.writeFile(wb, 'productos.xlsx');
 
       openSuccessModal('Exportación lista', 'El archivo "productos.xlsx" se generó correctamente.');
-
-    } catch (error) {
-      console.error('Error al exportar Excel:', error);
+      await logAction('Exportó el catálogo completo a Excel');
+    } catch (errorResp) {
+      if (errorResp?.response?.status === 401) {
+        openErrorModal('Sesión expirada', 'Tu sesión ha expirado. Inicia sesión nuevamente.');
+        navigate('/');
+        return;
+      }
+      // eslint-disable-next-line no-console
+      console.error('Error al exportar Excel:', errorResp);
       setError('Error al exportar los productos.');
     }
   };
 
-  /** ============ IMPORT PREVIEW (con correcciones) ============ */
+  // ======= IMPORT PREVIEW =======
   const handleImportPreview = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -395,36 +399,24 @@ const Consulta = () => {
     setImportPreview(null);
 
     try {
-      if (!['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(file.type)) {
+      const validTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel'
+      ];
+      if (!validTypes.includes(file.type)) {
         throw new Error('Formato de archivo no válido. Solo se aceptan archivos Excel (.xlsx, .xls)');
-      }
-
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('No se encontró el token de autenticación');
       }
 
       const fd = new FormData();
       fd.append('file', file);
       fd.append('timestamp', new Date().toISOString());
 
-      const response = await axios.post(
-        `${API_BASE}/productos/import-preview`,
-        fd,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data'
-          },
-          timeout: 60000
-        }
-      );
+      const response = await api.post('/productos/import-preview', fd, { timeout: 60000 });
 
       if (!response.data || typeof response.data !== 'object') {
         throw new Error('La respuesta del servidor no es válida');
       }
 
-      // Normalizamos la respuesta
       const processedData = {
         crear: Array.isArray(response.data.crear) ? response.data.crear : [],
         actualizar: Array.isArray(response.data.actualizar) ? response.data.actualizar : [],
@@ -440,50 +432,48 @@ const Consulta = () => {
         }
       };
 
-      // 🔧 Corrección 1: si un código está en actualizar o eliminar, NO debe aparecer en crear
+      // quitar duplicados entre crear/actualizar/eliminar
       const codigosActualizar = new Set(processedData.actualizar.map(x => String(x.codigo ?? x?.datos?.codigo ?? '').trim()).filter(Boolean));
       const codigosEliminar = new Set(processedData.eliminar.map(x => String(x.codigo ?? '').trim()).filter(Boolean));
 
       const crearFiltrado = processedData.crear.filter(item => {
         const code = String(item.codigo ?? item?.datos?.codigo ?? '').trim();
-        if (!code) return true; // si no hay código, no podemos cruzar (se deja para que el usuario lo vea como "nuevo")
+        if (!code) return true;
         return !codigosActualizar.has(code) && !codigosEliminar.has(code);
       });
 
-      // Reemplazamos crear por el filtrado
       processedData.crear = crearFiltrado;
 
-      // Si todo vino con errores, mostramos error global
       if (processedData.errores.length > 0 && processedData.metadata.total_filas && processedData.errores.length === processedData.metadata.total_filas) {
         throw new Error('El archivo contiene errores en todas las filas. Revise el formato.');
       }
 
-      setImportFile(file);
       setImportPreview(processedData);
       setShowImportPreview(true);
 
-    } catch (error) {
+    } catch (err) {
       let errorMsg = 'Error al procesar el archivo';
 
-      if (error.response) {
-        if (error.response.status === 413) {
+      if (err.response) {
+        if (err.response.status === 413) {
           errorMsg = 'El archivo es demasiado grande';
-        } else if (error.response.data?.errors) {
-          errorMsg = Object.values(error.response.data.errors).join(', ');
+        } else if (err.response.data?.errors) {
+          errorMsg = Object.values(err.response.data.errors).join(', ');
         } else {
-          errorMsg = error.response.data?.message || `Error del servidor (${error.response.status})`;
+          errorMsg = err.response.data?.message || `Error del servidor (${err.response.status})`;
         }
-      } else if (error.message.includes('token')) {
-        errorMsg = 'Sesión expirada. Por favor, vuelva a iniciar sesión';
+      } else if (err.message?.toLowerCase().includes('token')) {
+        errorMsg = 'Sesión expirada. Por favor, vuelve a iniciar sesión';
       } else {
-        errorMsg = error.message;
+        errorMsg = err.message;
       }
 
       setError(errorMsg);
-      console.error('Detalles del error:', {
-        error: error.message,
-        response: error.response?.data,
-        stack: error.stack
+      // eslint-disable-next-line no-console
+      console.error('Detalles del error import-preview:', {
+        error: err.message,
+        response: err.response?.data,
+        stack: err.stack
       });
 
     } finally {
@@ -492,32 +482,33 @@ const Consulta = () => {
     }
   };
 
-  /** ====== Helper central de errores para confirmación ====== */
-  function handleImportError(error) {
+  // ======= Helper errores import-confirm =======
+  const handleImportError = (err) => {
     let errorMsg = 'Error al confirmar importación';
-    if (error.code === 'ECONNABORTED') {
+    if (err.code === 'ECONNABORTED') {
       errorMsg = 'El servidor no respondió a tiempo';
-    } else if (error.response) {
-      switch (error.response.status) {
+    } else if (err.response) {
+      switch (err.response.status) {
         case 401: errorMsg = 'No autorizado - Token inválido o expirado'; break;
         case 404: errorMsg = 'Ruta no encontrada o método bloqueado (404)'; break;
-        case 405: errorMsg = 'Método no permitido (405). Prueba con POST o habilita PUT en el hosting'; break;
-        case 422: errorMsg = error.response.data.message || 'Datos de validación incorrectos'; break;
-        default:  errorMsg = error.response.data?.message || `Error del servidor (${error.response.status})`;
+        case 405: errorMsg = 'Método no permitido (405)'; break;
+        case 422: errorMsg = err.response.data.message || 'Datos de validación incorrectos'; break;
+        default:  errorMsg = err.response.data?.message || `Error del servidor (${err.response.status})`;
       }
-    } else if (error.message?.toLowerCase().includes('token')) {
+    } else if (err.message?.toLowerCase().includes('token')) {
       errorMsg = 'Problema de autenticación - Vuelve a iniciar sesión';
     }
     setError(errorMsg);
-    console.error('Detalles del error:', {
-      message: error.message,
-      status: error.response?.status,
-      response: error.response?.data,
-      config: error.config
+    // eslint-disable-next-line no-console
+    console.error('Detalles del error import-confirm:', {
+      message: err.message,
+      status: err.response?.status,
+      response: err.response?.data,
+      config: err.config
     });
-  }
+  };
 
-  /** ====== Confirmación de importación (con fallback PUT→POST) ====== */
+  // ======= Confirmación de importación + log =======
   const handleConfirmImport = async () => {
     if (!importPreview) {
       setError('No hay datos de importación para confirmar');
@@ -528,12 +519,6 @@ const Consulta = () => {
     setShowImportPreview(false);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('No se encontró token de autenticación');
-      }
-
-      // Armamos payload limpio (por si el backend espera un formato concreto)
       const payload = {
         crear: importPreview.crear.map(item => item.datos || item),
         actualizar: importPreview.actualizar.map(item => ({
@@ -543,39 +528,13 @@ const Consulta = () => {
         eliminar: importPreview.eliminar.map(item => ({ codigo: item.codigo || item }))
       };
 
-      const cfg = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        timeout: 30000
-      };
-
-      // 1) Intento con PUT
-      let response;
-      try {
-        response = await axios.put(`${API_BASE}/productos/import-confirm`, payload, cfg);
-      } catch (err) {
-        // 2) Si 404/405, fallback a POST (posible bloqueo de PUT en hosting)
-        if (err?.response && [404, 405].includes(err.response.status)) {
-          try {
-            response = await axios.post(`${API_BASE}/productos/import-confirm`, payload, cfg);
-          } catch (err2) {
-            handleImportError(err2);
-            return;
-          }
-        } else {
-          handleImportError(err);
-          return;
-        }
-      }
+      // ✅ Cambiado: usar SOLO POST para evitar el 404 en consola
+      const response = await api.post('/productos/import-confirm', payload, { timeout: 30000 });
 
       if (!response?.data) {
         throw new Error('La respuesta del servidor está vacía');
       }
 
-      // Modal de éxito para la importación
       const msg = [
         'La importación se completó correctamente:',
         `• Nuevos: ${response.data.creados || 0}`,
@@ -584,24 +543,21 @@ const Consulta = () => {
       ].join('\n');
       openSuccessModal('✅ Importación completada', msg);
 
+      await logAction('Confirmó importación de productos desde Excel');
       await fetchProductos(1);
 
-    } catch (error) {
-      handleImportError(error);
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        openErrorModal('Sesión expirada', 'Tu sesión ha expirado. Inicia sesión nuevamente.');
+        navigate('/');
+        return;
+      }
+      handleImportError(err);
     } finally {
       setImporting(false);
-      setImportFile(null);
       setImportPreview(null);
     }
   };
-
-  useEffect(() => {
-    // si quieres autocerrar el success modal a los 3s, descomenta:
-    // if (successModal.show) {
-    //   const t = setTimeout(() => closeSuccessModal(), 3000);
-    //   return () => clearTimeout(t);
-    // }
-  }, [successModal.show]);
 
   // ======================
   // Render
@@ -612,7 +568,7 @@ const Consulta = () => {
         <Container fluid>
           <Navbar.Brand className="d-flex align-items-center">
             <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
-          <span
+            <span
               className="consulta-title"
               role="link"
               style={{ cursor: 'pointer'}}
@@ -710,7 +666,6 @@ const Consulta = () => {
 
             {lastPage > 1 && (
               <div className="pagination-wrapper mt-3 d-flex justify-content-center align-items-center gap-2">
-                {/* ———— MISMO DISEÑO QUE documentos.jsx ———— */}
                 {/* Primera página */}
                 <button
                   className={`pagination-btn ${loading ? 'opacity-50' : ''}`}
@@ -768,7 +723,7 @@ const Consulta = () => {
         </Card>
       </Container>
 
-      {/* Modal VER – diseño mejorado */}
+      {/* Modal VER */}
       <Modal
         show={showViewModal}
         onHide={() => setShowViewModal(false)}
@@ -783,10 +738,7 @@ const Consulta = () => {
             <>
               <Modal.Header
                 closeButton
-                style={{
-                  backgroundColor: headerColor,
-                  color: '#fff'
-                }}
+                style={{ backgroundColor: headerColor, color: '#fff' }}
               >
                 <Modal.Title className="d-flex align-items-center gap-2">
                   Detalles del Producto
@@ -1015,9 +967,10 @@ const Consulta = () => {
                 </li>
                 <li>El nombre de las columnas debe coincidir con los campos del sistema.</li>
                 <li>Revisa que no haya celdas vacías en campos obligatorios como <strong>código</strong> o <strong>nombre</strong>.</li>
+                <li>Al momento de cargar el archivo, verificar que no tenga ningun tipo de formulas.</li>
                 <li>Haz clic en <strong>"Importar Excel"</strong> para seleccionar el archivo.</li>
                 <li>Luego espera el mensaje de confirmación.</li>
-                <li>Al momento de importar el archivo, veas errores si hay codigos repetidos o si algunos campos no están completos.</li>
+                <li>Si hay errores (códigos repetidos/campos vacíos), se mostrarán en la vista previa.</li>
               </ul>
               <Button
                 as="a"
@@ -1039,7 +992,7 @@ const Consulta = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* Modal PREVIEW IMPORT (con Correcciones 1 y 2) */}
+      {/* Modal PREVIEW IMPORT */}
       <Modal show={showImportPreview} onHide={() => setShowImportPreview(false)} centered size="xl">
         <Modal.Header closeButton>
           <Modal.Title>
@@ -1172,12 +1125,12 @@ const Consulta = () => {
               <Tab eventKey="errores" title="Errores">
                 {importPreview.errores?.length > 0 ? (
                   <div>
-                    {importPreview.errores.map((error, index) => (
+                    {importPreview.errores.map((err, index) => (
                       <Alert key={`error-${index}`} variant="danger" className="mb-2">
-                        {error.mensaje || error.message || 'Error desconocido'}
-                        {error.filas && (
+                        {err.mensaje || err.message || 'Error desconocido'}
+                        {err.filas && (
                           <div className="mt-1">
-                            <small>Filas afectadas: {error.filas.join(', ')}</small>
+                            <small>Filas afectadas: {err.filas.join(', ')}</small>
                           </div>
                         )}
                       </Alert>
@@ -1233,7 +1186,7 @@ const Consulta = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* Modal de errores “bonito” */}
+      {/* Modal de errores */}
       <Modal show={errorModal.show} onHide={closeErrorModal} centered>
         <Modal.Header closeButton style={{ backgroundColor: '#dc3545', color: '#fff' }}>
           <Modal.Title>{errorModal.title || 'Atención'}</Modal.Title>
@@ -1248,7 +1201,7 @@ const Consulta = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* Modal de éxito “bonito” */}
+      {/* Modal de éxito */}
       <Modal show={successModal.show} onHide={closeSuccessModal} centered>
         <Modal.Header closeButton style={{ backgroundColor: '#198754', color: '#fff' }}>
           <Modal.Title>{successModal.title || 'Operación exitosa'}</Modal.Title>

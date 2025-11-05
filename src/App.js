@@ -1,6 +1,6 @@
 // src/App.js
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/protectedroute.jsx";
 
@@ -15,132 +15,162 @@ import Clientedoc from './components/clientedoc.jsx';
 import Vademecum from './components/vademecum.jsx';
 import Capacitacion from './components/capacitacion.jsx';
 import Laboratorios from './components/laboratorios.jsx';
+import LaboratoriosAdmin from './components/laboratoriosadmin.jsx'; // ✅ Nuevo import
 import ProductoPorLaboratorio from './components/productoporlaboratorio.jsx';
+import ProductoPorLaboratorios from './components/productoporlaboratorios.jsx';
 import Vencimiento from './components/vencimiento.jsx';
-import VencimientoAdmin from './components/vencimientoadmin.jsx'; // ✅ ahora en minúscula
+import VencimientoAdmin from './components/vencimientoadmin.jsx';
+import Trazabilidad from './components/trazabilidad.jsx';
 
 const App = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <Routes>
 
-          {/* Ruta pública */}
-          <Route path="/" element={<Login />} />
+        {/* Ruta pública */}
+        <Route path="/" element={<Login />} />
 
-          {/* Rutas protegidas por rol */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
-                <Admin />
-              </ProtectedRoute>
-            }
-          />
+        {/* Rutas protegidas para ADMIN */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={['Administrador']}>
+              <Admin />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/usuarios"
-            element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
-                <Usuarios />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/trazabilidad"
+          element={
+            <ProtectedRoute allowedRoles={['Administrador']}>
+              <Trazabilidad />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/consulta"
-            element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
-                <Consulta />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/usuarios"
+          element={
+            <ProtectedRoute allowedRoles={['Administrador']}>
+              <Usuarios />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/cliente"
-            element={
-              <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
-                <Cliente />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/consulta"
+          element={
+            <ProtectedRoute allowedRoles={['Administrador']}>
+              <Consulta />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/documentos"
-            element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
-                <Documentos />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/documentos"
+          element={
+            <ProtectedRoute allowedRoles={['Administrador']}>
+              <Documentos />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/clientedoc"
-            element={
-              <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
-                <Clientedoc />
-              </ProtectedRoute>
-            }
-          />
+        {/* ✅ Nueva ruta Laboratorios Admin */}
+        <Route
+          path="/laboratoriosadmin"
+          element={
+            <ProtectedRoute allowedRoles={['Administrador']}>
+              <LaboratoriosAdmin />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/vademecum"
-            element={
-              <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
-                <Vademecum />
-              </ProtectedRoute>
-            }
-          />
+        {/* ✅ Vencimiento exclusivo para Admin */}
+        <Route
+          path="/vencimiento-admin"
+          element={
+            <ProtectedRoute allowedRoles={['Administrador']}>
+              <VencimientoAdmin />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/laboratorios"
-            element={
-              <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
-                <Laboratorios />
-              </ProtectedRoute>
-            }
-          />
+        {/* Rutas protegidas para roles de campo */}
+        <Route
+          path="/cliente"
+          element={
+            <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
+              <Cliente />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/capacitacion"
-            element={
-              <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
-                <Capacitacion />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/clientedoc"
+          element={
+            <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
+              <Clientedoc />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/productoporlaboratorio/:laboratorioNombre"
-            element={
-              <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
-                <ProductoPorLaboratorio />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/vademecum"
+          element={
+            <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
+              <Vademecum />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* ✅ Vencimiento para roles de campo y admin */}
-          <Route
-            path="/vencimiento"
-            element={
-              <ProtectedRoute allowedRoles={['Farmacéutico', 'visitador medico', ]}>
-                <Vencimiento />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/laboratorios"
+          element={
+            <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
+              <Laboratorios />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* ✅ Vencimiento exclusivo para Admin */}
-          <Route
-            path="/vencimiento-admin"
-            element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
-                <VencimientoAdmin />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/capacitacion"
+          element={
+            <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
+              <Capacitacion />
+            </ProtectedRoute>
+          }
+        />
 
-        </Routes>
-      </BrowserRouter>
+        <Route
+          path="/productoporlaboratorio/:laboratorioNombre"
+          element={
+            <ProtectedRoute allowedRoles={['Farmacéutico', 'Vendedor', 'visitador medico']}>
+              <ProductoPorLaboratorio />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/productoporlaboratorios/:laboratorioNombre"
+          element={
+            <ProtectedRoute allowedRoles={['administrador']}>
+              <ProductoPorLaboratorios />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ Vencimiento para roles de campo */}
+        <Route
+          path="/vencimiento"
+          element={
+            <ProtectedRoute allowedRoles={['Farmacéutico', 'visitador medico']}>
+              <Vencimiento />
+            </ProtectedRoute>
+          }
+        />
+
+      </Routes>
     </AuthProvider>
   );
 };

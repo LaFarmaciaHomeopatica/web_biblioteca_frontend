@@ -3,24 +3,42 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export const ProtectedRoute = ({ allowedRoles, children }) => {
+/**
+ * Uso:
+ * <ProtectedRoute allowedRoles={['Administrador','Farmacéutico']}>
+ *   <Componente />
+ * </ProtectedRoute>
+ *
+ * - Normaliza roles (trim + lower-case) para comparar.
+ * - Si no está autenticado => redirige a "/".
+ * - Si no tiene rol permitido => redirige a "/".
+ * - Si allowedRoles no se pasa o está vacío => permite el acceso.
+ */
+export const ProtectedRoute = ({ allowedRoles = [], children }) => {
   const { token, usuario, loading } = useAuth();
 
-  // Mientras carga el token desde localStorage
+  // Mientras carga el estado de auth (ej. leyendo localStorage)
   if (loading) {
-    return <div>Cargando sesión...</div>; // aquí puedes poner un spinner
+    return <div style={{ padding: '2rem', textAlign: 'center' }}>Cargando sesión…</div>;
   }
 
-  // Si no hay token o usuario después de cargar, redirige al login
+  // No autenticado
   if (!token || !usuario) {
     return <Navigate to="/" replace />;
   }
 
-  // Si hay usuario pero su rol no está permitido, lo manda al inicio
-  if (allowedRoles && !allowedRoles.includes(usuario.rol)) {
+  // Normalizar rol del usuario (acepta usuario.rol o usuario.role)
+  const userRoleRaw = usuario?.rol ?? usuario?.role ?? '';
+  const userRoleNorm = String(userRoleRaw).trim().toLowerCase();
+
+  // Normalizar lista de roles permitidos
+  const allowedNorm = (allowedRoles || []).map(r => String(r).trim().toLowerCase());
+
+  // Si hay restricciones y el rol no está incluido, negar acceso
+  if (allowedNorm.length > 0 && !allowedNorm.includes(userRoleNorm)) {
     return <Navigate to="/" replace />;
   }
 
-  // Si todo está bien, muestra el contenido protegido
+  // Autorizado
   return children;
 };
