@@ -1,11 +1,22 @@
 // src/components/clientedoc.jsx
-import React, { useState, useEffect, useRef, useCallback} from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
-  Container, Navbar, Nav, Button, Card, Form, Spinner, Modal, InputGroup, Tabs, Tab
+  Container,
+  Navbar,
+  Nav,
+  Button,
+  Card,
+  Form,
+  Spinner,
+  Modal,
+  InputGroup,
+  Tabs,
+  Tab
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/clientedoc.css';
+import '../assets/consulta.css'; // ⬅️ reutilizamos el mismo layout/ancho que consulta.jsx
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
 import { useAuth } from '../context/AuthContext';
@@ -64,7 +75,7 @@ const buildProxyUrlVideo = (rawRuta) => {
 const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
-  headers: { Accept: 'application/json' },
+  headers: { Accept: 'application/json' }
 });
 api.interceptors.request.use((cfg) => {
   const t = localStorage.getItem('authToken');
@@ -96,7 +107,7 @@ const Clientedoc = () => {
 
   const [errorModal, setErrorModal] = useState({ show: false, title: '', message: '' });
   const openErrorModal = (title, message) => setErrorModal({ show: true, title, message });
-  const closeErrorModal = () => setErrorModal({ show: false, message: '' });
+  const closeErrorModal = () => setErrorModal({ show: false, title: '', message: '' });
 
   const cancelTokenSourceRef = useRef(null);
 
@@ -169,22 +180,30 @@ const Clientedoc = () => {
     return () => clearTimeout(id);
   }, [searchVid, activeKey, fetchVideos]);
 
-  useEffect(() => () => cancelTokenSourceRef.current?.cancel(), []);
+  useEffect(() => {
+    return () => {
+      if (cancelTokenSourceRef.current) {
+        cancelTokenSourceRef.current.cancel();
+      }
+    };
+  }, []);
 
   /* ======== Abrir documento ======== */
   const handleOpenDoc = (doc) => {
-    const url = doc?.url && /^https?:\/\//i.test(doc.url)
-      ? doc.url
-      : buildProxyUrlDoc(pickRuta(doc));
+    const url =
+      doc?.url && /^https?:\/\//i.test(doc.url)
+        ? doc.url
+        : buildProxyUrlDoc(pickRuta(doc));
     if (!url) return openErrorModal('Ruta inválida', 'No se puede abrir el documento.');
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   /* ======== Abrir video ======== */
   const handleOpenVideo = (vid) => {
-    const url = vid?.url && /^https?:\/\//i.test(vid.url)
-      ? vid.url
-      : buildProxyUrlVideo(pickRuta(vid));
+    const url =
+      vid?.url && /^https?:\/\//i.test(vid.url)
+        ? vid.url
+        : buildProxyUrlVideo(pickRuta(vid));
     if (!url) return openErrorModal('Ruta inválida', 'No se puede reproducir el video.');
     setVideoToPlay({ nombre: vid.nombre, url });
     setShowVideoModal(true);
@@ -205,116 +224,225 @@ const Clientedoc = () => {
   };
 
   const go = (path) => () => navigate(path);
-  const handleLogout = async () => { await logout(); navigate('/'); };
+
+  // ✅ NUEVO: botón Módulo Médico (cliente)
+  const handleGoToModuloMedico = () => navigate('/modulomedico-cliente');
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
 
   return (
     <div className="clientedoc-layout">
-      {/* HEADER */}
+      {/* HEADER (igual que cliente) */}
       <Navbar expand="lg" className="clientedoc-header" variant="dark">
         <Container fluid>
           <Navbar.Brand className="d-flex align-items-center">
             <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
-            <span className="clientedoc-title" role="link" style={{ cursor: 'pointer' }} onClick={go('/cliente')}>
+            <span
+              className="clientedoc-title"
+              role="link"
+              style={{ cursor: 'pointer' }}
+              onClick={go('/cliente')}
+            >
               BIBLIOTECALFH
             </span>
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="ms-auto d-flex flex-column flex-lg-row gap-2 mt-3 mt-lg-0">
-              <Button onClick={go('/vencimiento')}><i className="bi bi-hourglass-split me-1"></i> Vencimiento</Button>
-              <Button onClick={go('/laboratorios')}><i className="bi bi-droplet me-1"></i> Laboratorios</Button>
-              <Button onClick={go('/vademecum')}><i className="bi bi-book me-1"></i> Vademécum</Button>
-              <Button onClick={go('/capacitacion')}><i className="bi bi-mortarboard me-1"></i> Capacitación</Button>
-              <Button onClick={go('/clientedoc')}><i className="bi bi-file-earmark-text me-1"></i> Documentos</Button>
-              <Button onClick={go('/cliente')} variant="secondary"><i className="bi bi-box-seam me-1"></i> Productos</Button>
-              <Button onClick={handleLogout} className="logout-button" variant="danger"><i className="bi bi-box-arrow-right me-1"></i> Salir</Button>
+              {/* ✅ NUEVO BOTÓN a la izquierda de Vencimiento */}
+              <Button onClick={handleGoToModuloMedico}>
+                <i className="bi bi-heart-pulse me-1"></i> Médicos
+              </Button>
+
+              {/* ✅ CAMBIO ÚNICO: ruta + texto del botón */}
+              <Button onClick={go('/registrosanitariocliente')}>
+                <i className="bi bi-hourglass-split me-1"></i> Registro Sanitario
+              </Button>
+
+              <Button onClick={go('/laboratorios')}>
+                <i className="bi bi-droplet me-1"></i> Laboratorios
+              </Button>
+              <Button onClick={go('/vademecum')}>
+                <i className="bi bi-book me-1"></i> Vademécum
+              </Button>
+              <Button onClick={go('/capacitacion')}>
+                <i className="bi bi-mortarboard me-1"></i> Capacitación
+              </Button>
+              <Button onClick={go('/clientedoc')}>
+                <i className="bi bi-file-earmark-text me-1"></i> Documentos
+              </Button>
+              <Button onClick={go('/cliente')} variant="secondary">
+                <i className="bi bi-box-seam me-1"></i> Productos
+              </Button>
+              <Button onClick={handleLogout} className="logout-button" variant="danger">
+                <i className="bi bi-box-arrow-right me-1"></i> Salir
+              </Button>
             </Nav>
           </Navbar.Collapse>
         </Container>
       </Navbar>
 
-      {/* CONTENIDO */}
-      <Container fluid className="clientedoc-content">
-        <Card className="clientedoc-card mt-4">
+      {/* CONTENIDO – mismo layout que consulta.jsx */}
+      <Container fluid className="consulta-content px-3 px-md-5">
+        <Card className="consulta-card mt-4">
           <Card.Body>
-            <h2 className="clientedoc-title-main mb-4 text-center text-md-start">
+            <h2 className="consulta-title-main mb-4 text-center text-md-start">
               Documentos y Videos
             </h2>
 
-            <Tabs activeKey={activeKey} onSelect={(k) => setActiveKey(k || 'docs')} className="mb-3">
+            <Tabs
+              activeKey={activeKey}
+              onSelect={(k) => setActiveKey(k || 'docs')}
+              className="mb-3"
+            >
               {/* DOCUMENTOS */}
               <Tab eventKey="docs" title="Documentos">
-                <InputGroup className="mb-3">
-                  <Form.Control
-                    placeholder="Buscar documento..."
-                    value={searchDoc}
-                    onChange={(e) => setSearchDoc(e.target.value)}
-                  />
-                  {searchDoc && (
-                    <Button variant="outline-secondary" onClick={() => setSearchDoc('')}>
-                      <i className="bi bi-x-lg"></i>
-                    </Button>
-                  )}
-                </InputGroup>
+                <Form className="d-flex flex-column flex-md-row mb-4 gap-2">
+                  <InputGroup>
+                    <Form.Control
+                      type="text"
+                      placeholder="Buscar documento..."
+                      value={searchDoc}
+                      onChange={(e) => setSearchDoc(e.target.value)}
+                    />
+                    {searchDoc && (
+                      <Button
+                        variant="outline-secondary"
+                        onClick={() => setSearchDoc('')}
+                      >
+                        <i className="bi bi-x-lg"></i>
+                      </Button>
+                    )}
+                  </InputGroup>
+                </Form>
 
-                {loading && <div className="text-center mb-3">Cargando documentos...</div>}
+                {loading && (
+                  <div className="text-center mb-3">Cargando documentos...</div>
+                )}
 
-                <div className="document-list">
+                {/* Lista de tarjetas con el MISMO diseño que consulta.jsx */}
+                <div className="product-list">
                   {documentos.length > 0 ? (
                     documentos.map((doc) => (
-                      <div className="document-card" key={doc.id}>
-                        <div className="document-info">
-                          <p><strong>Nombre:</strong> {doc.nombre}</p>
+                      <div
+                        className="product-card"
+                        key={doc.id}
+                      >
+                        <div className="product-info text-start">
+                          <p>
+                            <strong>Nombre:</strong> {doc.nombre}
+                          </p>
                           <p>Fecha: {formatFecha(doc)}</p>
                         </div>
                         <div className="card-actions">
-                          <Button size="sm" variant="primary" className="btn-ver" onClick={() => handleOpenDoc(doc)}>
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            className="btn-ver"
+                            onClick={() => handleOpenDoc(doc)}
+                          >
                             <i className="bi bi-eye me-1"></i> Ver
                           </Button>
                         </div>
                       </div>
                     ))
                   ) : (
-                    !loading && <p className="text-center">No hay documentos disponibles</p>
+                    !loading && (
+                      <p className="text-center">No hay documentos disponibles</p>
+                    )
                   )}
                 </div>
 
                 {lastPageDoc > 1 && (
-                  <div className="pagination-wrapper mt-4 d-flex justify-content-center gap-2">
-                    <button className="pagination-btn" onClick={() => handlePageChangeDocs(1)} disabled={currentPageDoc === 1 || loading}><i className="bi bi-skip-backward-fill"></i></button>
-                    <button className="pagination-btn" onClick={() => handlePageChangeDocs(currentPageDoc - 1)} disabled={currentPageDoc === 1 || loading}><i className="bi bi-chevron-left"></i></button>
+                  <div className="pagination-wrapper mt-4 d-flex justify-content-center align-items-center gap-2">
+                    <button
+                      className="pagination-btn"
+                      onClick={() => handlePageChangeDocs(1)}
+                      disabled={currentPageDoc === 1 || loading}
+                      aria-label="Primera página"
+                      title="Primera página"
+                    >
+                      <i className="bi bi-skip-backward-fill"></i>
+                    </button>
+                    <button
+                      className="pagination-btn"
+                      onClick={() => handlePageChangeDocs(currentPageDoc - 1)}
+                      disabled={currentPageDoc === 1 || loading}
+                      aria-label="Página anterior"
+                      title="Página anterior"
+                    >
+                      <i className="bi bi-chevron-left"></i>
+                    </button>
                     <span className="pagination-info">
-                      {loading ? <Spinner animation="border" size="sm" /> : `${currentPageDoc} / ${lastPageDoc}`}
+                      {loading ? (
+                        <Spinner animation="border" size="sm" />
+                      ) : (
+                        `${currentPageDoc} / ${lastPageDoc}`
+                      )}
                     </span>
-                    <button className="pagination-btn" onClick={() => handlePageChangeDocs(currentPageDoc + 1)} disabled={currentPageDoc === lastPageDoc || loading}><i className="bi bi-chevron-right"></i></button>
-                    <button className="pagination-btn" onClick={() => handlePageChangeDocs(lastPageDoc)} disabled={currentPageDoc === lastPageDoc || loading}><i className="bi bi-skip-forward-fill"></i></button>
+                    <button
+                      className="pagination-btn"
+                      onClick={() =>
+                        handlePageChangeDocs(currentPageDoc + 1)
+                      }
+                      disabled={currentPageDoc === lastPageDoc || loading}
+                      aria-label="Página siguiente"
+                      title="Página siguiente"
+                    >
+                      <i className="bi bi-chevron-right"></i>
+                    </button>
+                    <button
+                      className="pagination-btn"
+                      onClick={() => handlePageChangeDocs(lastPageDoc)}
+                      disabled={currentPageDoc === lastPageDoc || loading}
+                      aria-label="Última página"
+                      title="Última página"
+                    >
+                      <i className="bi bi-skip-forward-fill"></i>
+                    </button>
                   </div>
                 )}
               </Tab>
 
               {/* VIDEOS */}
               <Tab eventKey="videos" title="Videos">
-                <InputGroup className="mb-3">
-                  <Form.Control
-                    placeholder="Buscar video..."
-                    value={searchVid}
-                    onChange={(e) => setSearchVid(e.target.value)}
-                  />
-                  {searchVid && (
-                    <Button variant="outline-secondary" onClick={() => setSearchVid('')}>
-                      <i className="bi bi-x-lg"></i>
-                    </Button>
-                  )}
-                </InputGroup>
+                <Form className="d-flex flex-column flex-md-row mb-4 gap-2">
+                  <InputGroup>
+                    <Form.Control
+                      type="text"
+                      placeholder="Buscar video..."
+                      value={searchVid}
+                      onChange={(e) => setSearchVid(e.target.value)}
+                    />
+                    {searchVid && (
+                      <Button
+                        variant="outline-secondary"
+                        onClick={() => setSearchVid('')}
+                      >
+                        <i className="bi bi-x-lg"></i>
+                      </Button>
+                    )}
+                  </InputGroup>
+                </Form>
 
-                {loading && <div className="text-center mb-3">Cargando videos...</div>}
+                {loading && (
+                  <div className="text-center mb-3">Cargando videos...</div>
+                )}
 
-                <div className="document-list">
+                <div className="product-list">
                   {videos.length > 0 ? (
                     videos.map((vid) => (
-                      <div className="document-card" key={vid.id}>
-                        <div className="document-info">
-                          <p><strong>Nombre:</strong> {vid.nombre}</p>
+                      <div
+                        className="product-card"
+                        key={vid.id}
+                      >
+                        <div className="product-info text-start">
+                          <p>
+                            <strong>Nombre:</strong> {vid.nombre}
+                          </p>
                           <p>Fecha: {formatFecha(vid)}</p>
                         </div>
                         <div className="card-actions">
@@ -330,19 +458,59 @@ const Clientedoc = () => {
                       </div>
                     ))
                   ) : (
-                    !loading && <p className="text-center">No hay videos disponibles</p>
+                    !loading && (
+                      <p className="text-center">No hay videos disponibles</p>
+                    )
                   )}
                 </div>
 
                 {lastPageVid > 1 && (
-                  <div className="pagination-wrapper mt-4 d-flex justify-content-center gap-2">
-                    <button className="pagination-btn" onClick={() => handlePageChangeVids(1)} disabled={currentPageVid === 1 || loading}><i className="bi bi-skip-backward-fill"></i></button>
-                    <button className="pagination-btn" onClick={() => handlePageChangeVids(currentPageVid - 1)} disabled={currentPageVid === 1 || loading}><i className="bi bi-chevron-left"></i></button>
+                  <div className="pagination-wrapper mt-4 d-flex justify-content-center align-items-center gap-2">
+                    <button
+                      className="pagination-btn"
+                      onClick={() => handlePageChangeVids(1)}
+                      disabled={currentPageVid === 1 || loading}
+                      aria-label="Primera página"
+                      title="Primera página"
+                    >
+                      <i className="bi bi-skip-backward-fill"></i>
+                    </button>
+                    <button
+                      className="pagination-btn"
+                      onClick={() => handlePageChangeVids(currentPageVid - 1)}
+                      disabled={currentPageVid === 1 || loading}
+                      aria-label="Página anterior"
+                      title="Página anterior"
+                    >
+                      <i className="bi bi-chevron-left"></i>
+                    </button>
                     <span className="pagination-info">
-                      {loading ? <Spinner animation="border" size="sm" /> : `${currentPageVid} / ${lastPageVid}`}
+                      {loading ? (
+                        <Spinner animation="border" size="sm" />
+                      ) : (
+                        `${currentPageVid} / ${lastPageVid}`
+                      )}
                     </span>
-                    <button className="pagination-btn" onClick={() => handlePageChangeVids(currentPageVid + 1)} disabled={currentPageVid === lastPageVid || loading}><i className="bi bi-chevron-right"></i></button>
-                    <button className="pagination-btn" onClick={() => handlePageChangeVids(lastPageVid)} disabled={currentPageVid === lastPageVid || loading}><i className="bi bi-skip-forward-fill"></i></button>
+                    <button
+                      className="pagination-btn"
+                      onClick={() =>
+                        handlePageChangeVids(currentPageVid + 1)
+                      }
+                      disabled={currentPageVid === lastPageVid || loading}
+                      aria-label="Página siguiente"
+                      title="Página siguiente"
+                    >
+                      <i className="bi bi-chevron-right"></i>
+                    </button>
+                    <button
+                      className="pagination-btn"
+                      onClick={() => handlePageChangeVids(lastPageVid)}
+                      disabled={currentPageVid === lastPageVid || loading}
+                      aria-label="Última página"
+                      title="Última página"
+                    >
+                      <i className="bi bi-skip-forward-fill"></i>
+                    </button>
                   </div>
                 )}
               </Tab>
@@ -352,7 +520,12 @@ const Clientedoc = () => {
       </Container>
 
       {/* MODAL REPRODUCTOR DE VIDEO */}
-      <Modal show={showVideoModal} onHide={() => setShowVideoModal(false)} centered size="lg">
+      <Modal
+        show={showVideoModal}
+        onHide={() => setShowVideoModal(false)}
+        centered
+        size="lg"
+      >
         <Modal.Header closeButton>
           <Modal.Title>{videoToPlay?.nombre || 'Reproductor'}</Modal.Title>
         </Modal.Header>
@@ -365,19 +538,28 @@ const Clientedoc = () => {
               preload="metadata"
             />
           ) : (
-            <div className="text-center text-muted">No se pudo cargar el video.</div>
+            <div className="text-center text-muted">
+              No se pudo cargar el video.
+            </div>
           )}
         </Modal.Body>
       </Modal>
 
       {/* MODAL ERROR */}
       <Modal show={errorModal.show} onHide={closeErrorModal} centered>
-        <Modal.Header closeButton style={{ backgroundColor: '#dc3545', color: '#fff' }}>
+        <Modal.Header
+          closeButton
+          style={{ backgroundColor: '#dc3545', color: '#fff' }}
+        >
           <Modal.Title>{errorModal.title || 'Atención'}</Modal.Title>
         </Modal.Header>
-        <Modal.Body>{errorModal.message || 'Ha ocurrido un error.'}</Modal.Body>
+        <Modal.Body>
+          {errorModal.message || 'Ha ocurrido un error.'}
+        </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={closeErrorModal}>Entendido</Button>
+          <Button variant="primary" onClick={closeErrorModal}>
+            Entendido
+          </Button>
         </Modal.Footer>
       </Modal>
 

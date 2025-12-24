@@ -108,10 +108,11 @@ const Capacitacion = () => {
   };
 
   const handleGoToCapacitacion = () => navigate('/capacitacion');
-  const handleGoToVademecum   = () => navigate('/vademecum');
-  const handleGoToDocumentos  = () => navigate('/clientedoc');
-  const handleGoToLaboratorios= () => navigate('/laboratorios');
-  const handleGoToVencimiento = () => navigate('/vencimiento');
+  const handleGoToVademecum = () => navigate('/vademecum');
+  const handleGoToDocumentos = () => navigate('/clientedoc');
+  const handleGoToLaboratorios = () => navigate('/laboratorios');
+  const handleGoToRegistroSanitariocliente = () => navigate('/registrosanitariocliente');
+  const handleGoToModuloMedico = () => navigate('/modulomedico-cliente');
 
   const handleLogout = async () => {
     await logout();
@@ -147,8 +148,12 @@ const Capacitacion = () => {
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="ms-auto d-flex flex-column flex-lg-row gap-2 mt-3 mt-lg-0">
-              <Button onClick={handleGoToVencimiento}>
-                <i className="bi bi-hourglass-split me-1"></i> Vencimiento
+
+              <Button onClick={handleGoToModuloMedico}>
+                <i className="bi bi-heart-pulse me-1"></i> Médicos
+              </Button>
+              <Button onClick={handleGoToRegistroSanitariocliente}>
+                <i className="bi bi-hourglass-split me-1"></i> Registro Sanitario
               </Button>
               <Button onClick={handleGoToLaboratorios}>
                 <i className="bi bi-droplet me-1"></i> Laboratorios

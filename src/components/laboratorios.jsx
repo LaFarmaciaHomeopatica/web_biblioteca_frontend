@@ -1,69 +1,132 @@
 // src/components/laboratorios.jsx
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
-  Container, Navbar, Nav, Button, Row, Col, Card, Spinner, Alert
+  Container,
+  Navbar,
+  Nav,
+  Button,
+  Row,
+  Col,
+  Card,
+  Spinner,
+  Alert,
+  InputGroup,
+  Form,
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/laboratorios.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
+import placeholder from '../assets/placeholder.png'; // ✅ placeholder blanco
 import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
 
 const DEBUG_URLS = false; // ponlo en true para ver en consola las URLs calculadas
 
-/** Imagen con fallback: primary -> backup -> logo */
-const LabImage = ({ alt, primary, backup }) => {
-  const [src, setSrc] = useState(primary || backup || null);
+/** Imagen perezosa: solo carga cuando la card entra en pantalla */
+const LazyLabImage = ({ alt, primary, backup }) => {
+  const containerRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [src, setSrc] = useState(null);
   const [triedBackup, setTriedBackup] = useState(false);
 
-  const handleError = useCallback(() => {
+  // Detecta cuando la card entra en el viewport
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            observer.unobserve(entry.target); // ya no necesitamos seguir observando
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: '0px 0px 100px 0px', // precarga un poco antes de que aparezca
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Cuando es visible, decide qué URL usar
+  useEffect(() => {
+    if (!isVisible) return;
+
+    if (primary) {
+      setSrc(primary);
+    } else if (backup) {
+      setSrc(backup);
+    } else {
+      setSrc(placeholder); // ✅ si no hay ninguna, queda blanco
+    }
+  }, [isVisible, primary, backup]);
+
+  const handleError = () => {
+    // Si falla la primaria, intenta backup
     if (!triedBackup && backup && src !== backup) {
       setTriedBackup(true);
       setSrc(backup);
     } else {
-      // último recurso
-      setSrc(logo);
+      // ✅ Último recurso: placeholder blanco (no logo)
+      setSrc(placeholder);
     }
-  }, [backup, triedBackup, src]);
-
-  if (!src) {
-    // Sin rutas, muestra un relleno para mantener la card consistente
-    return (
-      <div
-        className="laboratorio-img d-flex align-items-center justify-content-center"
-        style={{ background: '#f9f9f9', height: 120 }}
-      >
-        <img
-          src={logo}
-          alt={alt}
-          style={{ height: 60, objectFit: 'contain', opacity: 0.6 }}
-        />
-      </div>
-    );
-  }
+  };
 
   return (
-    <Card.Img
-      variant="top"
-      src={src}
-      alt={alt}
-      className="laboratorio-img"
-      style={{ height: 120, objectFit: 'contain', background: '#fff' }}
-      loading="lazy"
-      decoding="async"
-      onError={handleError}
-    />
+    <div
+      ref={containerRef}
+      className="laboratorio-img d-flex align-items-center justify-content-center"
+      style={{ background: '#ffffff', height: 120 }}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={alt}
+          style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
+          loading="lazy"
+          onError={handleError}
+        />
+      ) : (
+        // ✅ Mientras no es visible o aún no se decidió src, mostramos placeholder blanco
+        <img
+          src={placeholder}
+          alt={alt}
+          style={{ height: 60, objectFit: 'contain', opacity: 1 }}
+        />
+      )}
+    </div>
   );
 };
+
+/** Card de laboratorio (solo lectura) con tamaño fijo */
+const LabCard = ({ lab, onClickLab }) => (
+  <Card
+    onClick={() => onClickLab(lab.nombre)}
+    className="laboratorio-card h-100 shadow-sm"
+    style={{ cursor: 'pointer', width: 260, maxWidth: '100%' }}
+  >
+    <LazyLabImage alt={lab.nombre} primary={lab.primary} backup={lab.backup} />
+    <Card.Body className="p-2 text-center">
+      <h6 className="laboratorio-nombre">{lab.nombre}</h6>
+    </Card.Body>
+  </Card>
+);
 
 const Laboratorios = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
   const [loading, setLoading] = useState(false);
-  const [labs, setLabs] = useState([]);        // [{id, nombre, primary, backup}]
+  const [labs, setLabs] = useState([]); // [{id, nombre, primary, backup}]
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
 
   // ===== helpers URL =====
   const sanitizeAbsUrl = useCallback((u) => {
@@ -81,72 +144,87 @@ const Laboratorios = () => {
    *  - primary: lo más estable (preferimos imagen estática /backend/storage/...)
    *  - backup: la alternativa (proxy ?path=... o viceversa)
    */
-  const buildUrls = useCallback((d) => {
-    const baseApi  = (api.defaults?.baseURL || '').replace(/\/+$/, '');   // .../backend/api
-    const baseRoot = baseApi.replace(/\/api$/i, '');                      // .../backend
+  const buildUrls = useCallback(
+    (d) => {
+      const baseApi = (api.defaults?.baseURL || '').replace(/\/+$/, ''); // .../backend/api
+      const baseRoot = baseApi.replace(/\/api$/i, ''); // .../backend
 
-    const hasAbs = (s) => typeof s === 'string' && /^https?:\/\//i.test(s);
-    const hasRel = (s) => typeof s === 'string' && s.trim() !== '';
+      const hasAbs = (s) => typeof s === 'string' && /^https?:\/\//i.test(s);
+      const hasRel = (s) => typeof s === 'string' && s.trim() !== '';
 
-    let primary = null;
-    let backup  = null;
+      let primary = null;
+      let backup = null;
 
-    // 1) Preferir imagen estática absoluta si viene
-    if (hasAbs(d?.imagen_url)) {
-      primary = sanitizeAbsUrl(d.imagen_url);
-      if (hasRel(d?.imagen_path) || hasRel(d?.imagen)) {
-        const rel = (d.imagen_path || d.imagen).trim();
-        backup = sanitizeAbsUrl(`${baseApi}/laboratorios/imagen?path=${encodeURIComponent(rel)}`);
-      } else if (hasAbs(d?.image_url)) {
-        backup = sanitizeAbsUrl(d.image_url);
+      // 1) Preferir imagen estática absoluta si viene
+      if (hasAbs(d?.imagen_url)) {
+        primary = sanitizeAbsUrl(d.imagen_url);
+        if (hasRel(d?.imagen_path) || hasRel(d?.imagen)) {
+          const rel = (d.imagen_path || d.imagen).trim();
+          backup = sanitizeAbsUrl(
+            `${baseApi}/laboratorios/imagen?path=${encodeURIComponent(rel)}`
+          );
+        } else if (hasAbs(d?.image_url)) {
+          backup = sanitizeAbsUrl(d.image_url);
+        }
       }
-    }
-    // 2) Si no, usar image_url absoluta (proxy) como primary
-    else if (hasAbs(d?.image_url)) {
-      primary = sanitizeAbsUrl(d.image_url);
-      if (hasRel(d?.imagen_url)) {
+      // 2) Si no, usar image_url absoluta (proxy) como primary
+      else if (hasAbs(d?.image_url)) {
+        primary = sanitizeAbsUrl(d.image_url);
+        if (hasRel(d?.imagen_url)) {
+          const rel = d.imagen_url.trim().replace(/^\/+/, '');
+          backup = sanitizeAbsUrl(`${baseRoot}/${rel}`);
+        } else if (hasRel(d?.imagen_path) || hasRel(d?.imagen)) {
+          const rel = (d.imagen_path || d.imagen).trim();
+          backup = sanitizeAbsUrl(
+            `${baseApi}/laboratorios/imagen?path=${encodeURIComponent(rel)}`
+          );
+        }
+      }
+      // 3) imagen_url relativa → absoluta (storage)
+      else if (hasRel(d?.imagen_url)) {
         const rel = d.imagen_url.trim().replace(/^\/+/, '');
-        backup = sanitizeAbsUrl(`${baseRoot}/${rel}`);
-      } else if (hasRel(d?.imagen_path) || hasRel(d?.imagen)) {
+        primary = sanitizeAbsUrl(`${baseRoot}/${rel}`);
+        if (hasRel(d?.imagen_path) || hasRel(d?.imagen)) {
+          const relp = (d.imagen_path || d.imagen).trim();
+          backup = sanitizeAbsUrl(
+            `${baseApi}/laboratorios/imagen?path=${encodeURIComponent(relp)}`
+          );
+        } else if (hasAbs(d?.image_url)) {
+          backup = sanitizeAbsUrl(d.image_url);
+        }
+      }
+      // 4) Último recurso: proxy por path
+      else if (hasRel(d?.imagen_path) || hasRel(d?.imagen)) {
         const rel = (d.imagen_path || d.imagen).trim();
-        backup = sanitizeAbsUrl(`${baseApi}/laboratorios/imagen?path=${encodeURIComponent(rel)}`);
+        primary = sanitizeAbsUrl(
+          `${baseApi}/laboratorios/imagen?path=${encodeURIComponent(rel)}`
+        );
       }
-    }
-    // 3) imagen_url relativa → absoluta (storage)
-    else if (hasRel(d?.imagen_url)) {
-      const rel = d.imagen_url.trim().replace(/^\/+/, '');
-      primary = sanitizeAbsUrl(`${baseRoot}/${rel}`);
-      if (hasRel(d?.imagen_path) || hasRel(d?.imagen)) {
-        const relp = (d.imagen_path || d.imagen).trim();
-        backup = sanitizeAbsUrl(`${baseApi}/laboratorios/imagen?path=${encodeURIComponent(relp)}`);
-      } else if (hasAbs(d?.image_url)) {
-        backup = sanitizeAbsUrl(d.image_url);
+
+      if (DEBUG_URLS) {
+        // eslint-disable-next-line no-console
+        console.log(`[LAB ${d?.id} - ${d?.nombre}]`, { primary, backup });
       }
-    }
-    // 4) Último recurso: proxy por path
-    else if (hasRel(d?.imagen_path) || hasRel(d?.imagen)) {
-      const rel = (d.imagen_path || d.imagen).trim();
-      primary = sanitizeAbsUrl(`${baseApi}/laboratorios/imagen?path=${encodeURIComponent(rel)}`);
-    }
 
-    if (DEBUG_URLS) {
-      // eslint-disable-next-line no-console
-      console.log(`[LAB ${d?.id} - ${d?.nombre}]`, { primary, backup });
-    }
-
-    return { primary, backup };
-  }, [sanitizeAbsUrl]);
+      return { primary, backup };
+    },
+    [sanitizeAbsUrl]
+  );
 
   // === Navegación
-  const handleLaboratorioClick = useCallback((nombre) => {
-    navigate(`/productoporlaboratorio/${encodeURIComponent(nombre)}`);
-  }, [navigate]);
+  const handleLaboratorioClick = useCallback(
+    (nombre) => {
+      navigate(`/productoporlaboratorio/${encodeURIComponent(nombre)}`);
+    },
+    [navigate]
+  );
 
   const handleGoToLaboratorios = useCallback(() => navigate('/laboratorios'), [navigate]);
   const handleGoToVademecum = useCallback(() => navigate('/vademecum'), [navigate]);
   const handleGoToCapacitacion = useCallback(() => navigate('/capacitacion'), [navigate]);
   const handleGoToDocs = useCallback(() => navigate('/clientedoc'), [navigate]);
-  const handleGoToVencimiento = useCallback(() => navigate('/vencimiento'), [navigate]);
+  const handleGoToRegistroSanitariocliente = useCallback(() => navigate('/registrosanitariocliente'), [navigate]);
+  const handleGoToModuloMedico = () => navigate('/modulomedico-cliente');
   const handleLogout = useCallback(async () => {
     await logout();
     navigate('/');
@@ -165,12 +243,15 @@ const Laboratorios = () => {
           id: d.id,
           nombre: d.nombre,
           primary,
-          backup
+          backup,
         };
       });
       setLabs(normalized);
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'No se pudieron cargar los laboratorios.';
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'No se pudieron cargar los laboratorios.';
       setError(msg);
       // eslint-disable-next-line no-console
       console.error('GET /laboratorios error:', err?.response?.data || err);
@@ -183,17 +264,26 @@ const Laboratorios = () => {
     fetchLabs();
   }, [fetchLabs]);
 
-  // Orden alfabético
-  const ordered = useMemo(() => {
-    return [...labs].sort((a, b) =>
-      String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', { sensitivity: 'base' })
+  // Filtro + orden alfabético
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const base = term
+      ? labs.filter((l) => String(l.nombre || '').toLowerCase().includes(term))
+      : labs;
+
+    return [...base].sort((a, b) =>
+      String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', {
+        sensitivity: 'base',
+      })
     );
-  }, [labs]);
+  }, [labs, search]);
+
+  const onlyOne = filtered.length === 1;
 
   return (
     <div className="laboratorios-layout">
       {/* HEADER */}
-      <Navbar expand="lg" className="cliente-header" variant="dark">
+      <Navbar expand="lg" className="consulta-header" variant="dark">
         <Container fluid>
           <Navbar.Brand className="d-flex align-items-center">
             <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
@@ -210,8 +300,12 @@ const Laboratorios = () => {
           <Navbar.Toggle aria-controls="navbarResponsive" />
           <Navbar.Collapse id="navbarResponsive" className="justify-content-end">
             <Nav className="d-flex flex-column flex-lg-row gap-2">
-              <Button onClick={handleGoToVencimiento}>
-                <i className="bi bi-hourglass-split me-1"></i> Vencimiento
+
+              <Button onClick={handleGoToModuloMedico}>
+                <i className="bi bi-heart-pulse me-1"></i> Médicos
+              </Button>
+              <Button onClick={handleGoToRegistroSanitariocliente}>
+                <i className="bi bi-hourglass-split me-1"></i> Registro Sanitario
               </Button>
               <Button onClick={handleGoToLaboratorios}>
                 <i className="bi bi-droplet me-1"></i> Laboratorios
@@ -240,6 +334,22 @@ const Laboratorios = () => {
       <Container fluid className="laboratorios-content px-3 px-md-5">
         <h2 className="laboratorios-title text-center my-4">Laboratorios</h2>
 
+        {/* Barra de búsqueda (igual que admin, pero sin botón de crear) */}
+        <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between my-3 gap-2">
+          <InputGroup className="me-2" style={{ maxWidth: 520 }}>
+            <InputGroup.Text>
+              <i className="bi bi-search" />
+            </InputGroup.Text>
+            <Form.Control
+              type="text"
+              placeholder="Buscar laboratorio..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </InputGroup>
+          {/* En la vista cliente no hay botón de crear */}
+        </div>
+
         {loading && (
           <div className="text-center my-3">
             <Spinner animation="border" size="sm" className="me-2" />
@@ -248,31 +358,46 @@ const Laboratorios = () => {
         )}
 
         {!loading && error && (
-          <Alert variant="danger" className="my-3">{error}</Alert>
-        )}
-
-        {!loading && !error && ordered.length === 0 && (
-          <Alert variant="info" className="my-3">
-            No hay laboratorios aún. Pídele al administrador que cree algunos en Laboratorios Admin.
+          <Alert variant="danger" className="my-3">
+            {error}
           </Alert>
         )}
 
-        <Row className="g-4">
-          {ordered.map((lab) => (
-            <Col key={lab.id} xs={6} sm={4} md={3} lg={2}>
-              <Card
-                onClick={() => handleLaboratorioClick(lab.nombre)}
-                className="laboratorio-card h-100 shadow-sm"
-                style={{ cursor: 'pointer' }}
-              >
-                <LabImage alt={lab.nombre} primary={lab.primary} backup={lab.backup} />
-                <Card.Body className="p-2 text-center">
-                  <h6 className="laboratorio-nombre">{lab.nombre}</h6>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+        {!loading && !error && filtered.length === 0 && (
+          <Alert variant="info" className="my-3">
+            No hay laboratorios aún. Pídele al administrador que cree algunos en Laboratorios
+            Admin.
+          </Alert>
+        )}
+
+        {/* LISTADO DE CARDS */}
+        {filtered.length > 0 && (
+          onlyOne ? (
+            // Caso 1 laboratorio: card centrada y grande
+            <Row className="g-4 justify-content-center">
+              <Col xs="auto">
+                <LabCard lab={filtered[0]} onClickLab={handleLaboratorioClick} />
+              </Col>
+            </Row>
+          ) : (
+            // Varios laboratorios: grid normal
+            <Row className="g-4">
+              {filtered.map((lab) => (
+                <Col
+                  key={lab.id}
+                  xs={12}
+                  sm={6}
+                  md={4}
+                  lg={3}
+                  xl={2}
+                  className="d-flex justify-content-center"
+                >
+                  <LabCard lab={lab} onClickLab={handleLaboratorioClick} />
+                </Col>
+              ))}
+            </Row>
+          )
+        )}
       </Container>
 
       <footer className="documentos-footer text-center py-3">

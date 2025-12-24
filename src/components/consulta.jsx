@@ -1,5 +1,4 @@
-// src/components/consulta.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Container, Navbar, Form, FormControl, Button, Row, Col,
   Card, Modal, Alert, Spinner, Tabs, Tab, Table, Badge
@@ -9,14 +8,16 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/consulta.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
-import api from '../api/api'; // ✅ cliente axios con baseURL y token
+import api from '../api/api';
 
-const PAGE_SIZE = 20; // Tamaño página para paginación en cliente
+const PAGE_SIZE = 20;
+
+// Proxy para ver PDFs (el mismo que tienes en api.php)
+const FILE_PROXY = `${window.location.origin}/backend/api/documentos/stream`;
 
 const Consulta = () => {
   const navigate = useNavigate();
 
-  // ======= Helpers de formato =======
   const formatearPrecio = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '';
     const numero = Number(String(valor).replace(/[^0-9.-]/g, ''));
@@ -29,9 +30,13 @@ const Consulta = () => {
   };
 
   const formatearIVA = (valor) => {
-    if (valor === null || valor === undefined || valor === '') return '';
-    const s = String(valor).trim().replace(',', '.');
-    return s.endsWith('%') ? s : `${s}%`;
+    if (valor === null || valor === undefined || valor === '') return '0%';
+
+    let num = Number(String(valor).replace(',', '.'));
+    if (Number.isNaN(num)) return '0%';
+
+    if (num > 0 && num < 1) num = num * 100;
+    return `${Math.round(num)}%`;
   };
 
   const normalizarIVANumero = (valor) => {
@@ -47,7 +52,20 @@ const Consulta = () => {
     return valor ?? '';
   };
 
-  // ======= Estado =======
+  const normalizarCodigosAsociados = (val) => {
+    if (val === null || val === undefined) return [];
+    if (Array.isArray(val)) {
+      return Array.from(new Set(val.map((x) => String(x ?? '').trim()).filter(Boolean)));
+    }
+    const raw = String(val ?? '').trim();
+    if (!raw) return [];
+    const parts = raw
+      .split(/[\n,;]+/g)
+      .map((x) => String(x ?? '').trim())
+      .filter(Boolean);
+    return Array.from(new Set(parts));
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBy, setFilterBy] = useState('nombre');
   const [productos, setProductos] = useState([]);
@@ -65,39 +83,113 @@ const Consulta = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
 
-  // Import (preview y confirmación)
   const [importPreview, setImportPreview] = useState(null);
   const [importing, setImporting] = useState(false);
   const [showImportPreview, setShowImportPreview] = useState(false);
 
-  // Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
 
-  // ===== Modales de error/éxito =====
+  const [productDocs, setProductDocs] = useState([]);
+  const [loadingProductDocs, setLoadingProductDocs] = useState(false);
+  const [errorProductDocs, setErrorProductDocs] = useState(null);
+
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [loadingRelatedProducts, setLoadingRelatedProducts] = useState(false);
+  const [errorRelatedProducts, setErrorRelatedProducts] = useState(null);
+
+  // Cache de productos-all para paginación fluida en cliente (sin llamadas al cambiar de página)
+  const productosAllCacheRef = useRef(null);
+
+  const [viewingRelatedProduct, setViewingRelatedProduct] = useState(null);
+  const [showRelatedViewModal, setShowRelatedViewModal] = useState(false);
+
+  const [relatedProductDocs2, setRelatedProductDocs2] = useState([]);
+  const [loadingRelatedProductDocs2, setLoadingRelatedProductDocs2] = useState(false);
+  const [errorRelatedProductDocs2, setErrorRelatedProductDocs2] = useState(null);
+
+  const [relatedProducts2, setRelatedProducts2] = useState([]);
+  const [loadingRelatedProducts2, setLoadingRelatedProducts2] = useState(false);
+  const [errorRelatedProducts2, setErrorRelatedProducts2] = useState(null);
+
+  // ===== Modales de error/éxito (memoizados para evitar renders que rompan useCallback/useEffect) =====
   const [errorModal, setErrorModal] = useState({ show: false, title: '', message: '' });
-  const openErrorModal = (modalTitle, message) =>
+  const openErrorModal = useCallback((modalTitle, message) => {
     setErrorModal({ show: true, title: modalTitle, message });
-  const closeErrorModal = () => setErrorModal({ show: false, title: '', message: '' });
+  }, []);
+  const closeErrorModal = useCallback(() => {
+    setErrorModal({ show: false, title: '', message: '' });
+  }, []);
 
   const [successModal, setSuccessModal] = useState({ show: false, title: '', message: '' });
-  const openSuccessModal = (modalTitle, message) =>
+  const openSuccessModal = useCallback((modalTitle, message) => {
     setSuccessModal({ show: true, title: modalTitle, message });
-  const closeSuccessModal = () => setSuccessModal({ show: false, title: '', message: '' });
+  }, []);
+  const closeSuccessModal = useCallback(() => {
+    setSuccessModal({ show: false, title: '', message: '' });
+  }, []);
 
-  // ======= Trazabilidad (helper) =======
   const logAction = useCallback(async (accion) => {
     try {
       await api.post('/trazabilidad', { accion });
     } catch (e) {
-      // no bloquea si falla
-      // eslint-disable-next-line no-console
       console.warn('Trazabilidad no registrada:', e?.response?.data || e?.message);
     }
   }, []);
 
-  // ======= Paginación en cliente =======
-  const paginarCliente = (lista, page) => {
+  // ===== Selección múltiple de cards + modal para editar SOLO estado_registro =====
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [showBulkEstadoModal, setShowBulkEstadoModal] = useState(false);
+  const [bulkEstadoRegistro, setBulkEstadoRegistro] = useState('');
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const toggleSelected = useCallback((id) => {
+    if (!id) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectedCount = selectedIds.size;
+
+  // Para construir el payload COMPLETO y evitar 422 (PUT requiere campos completos en muchos backends)
+  const buildProductoUpdatePayload = useCallback((p, override = {}) => {
+    const payload = {
+      codigo: p?.codigo ?? '',
+      nombre: p?.nombre ?? '',
+      david: p?.david ?? '',
+      categoria: p?.categoria ?? '',
+      laboratorio: p?.laboratorio ?? '',
+      registro_sanitario: p?.registro_sanitario ?? '',
+      fecha_vencimiento: p?.fecha_vencimiento ?? '',
+      estado_registro: p?.estado_registro ?? '',
+      estado_producto: p?.estado_producto ?? '',
+      precio_publico: p?.precio_publico ?? '',
+      precio_medico: p?.precio_medico ?? '',
+      iva: normalizarIVANumero(p?.iva ?? ''),
+      formula_medica: p?.formula_medica ?? '',
+      productos_asociados: (() => {
+        const codigos = normalizarCodigosAsociados(
+          p?.productos_asociados ?? p?.productos_relacionados
+        );
+        return codigos.join(', ');
+      })(),
+      ...override,
+    };
+
+    return Object.fromEntries(
+      Object.entries(payload).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])
+    );
+  }, []);
+
+  // ===== Paginación en cliente =====
+  const paginarCliente = useCallback((lista, page) => {
     const total = lista.length;
     const lp = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const safePage = Math.min(Math.max(1, page), lp);
@@ -106,55 +198,66 @@ const Consulta = () => {
     setProductos(slice);
     setCurrentPage(safePage);
     setLastPage(lp);
-  };
+  }, []);
 
-  // ======= Cargar productos =======
+  // ===== Cargar productos (SIEMPRE paginación en cliente para que sea fluida) =====
   const fetchProductos = useCallback(async (page = 1) => {
-    setLoading(true);
     setError(null);
 
-    try {
+    const validTextFilters = [
+      'nombre', 'codigo', 'categoria', 'precio_publico', 'precio_medico', 'laboratorio'
+    ];
+
+    const applyFiltersAndPaginate = (all) => {
+      const term = searchTerm.trim().toLowerCase();
+
+      // INACTIVO
       if (filterBy === 'inactivo') {
-        const resp = await api.get('/productos-all');
-        const all = Array.isArray(resp.data) ? resp.data : [];
-        const inactivos = all.filter(
+        const inactivos = (all || []).filter(
           (p) => String(p?.estado_producto || '').toLowerCase() === 'inactivo'
         );
         paginarCliente(inactivos, page);
         return;
       }
 
+      // DAVID (vacío = todos con david)
       if (filterBy === 'david') {
-        const resp = await api.get('/productos-all');
-        const all = Array.isArray(resp.data) ? resp.data : [];
-        const term = searchTerm.trim().toLowerCase();
-
         const filtered = term
-          ? all.filter(p => String(p?.david ?? '').toLowerCase().includes(term))
-          : all.filter(p => String(p?.david ?? '').trim() !== '');
-
+          ? (all || []).filter(p => String(p?.david ?? '').toLowerCase().includes(term))
+          : (all || []).filter(p => String(p?.david ?? '').trim() !== '');
         paginarCliente(filtered, page);
         return;
       }
 
-      // filtros con paginación del backend
-      const params = new URLSearchParams({ page: String(page) });
-      const cleanSearch = searchTerm.trim();
+      // Filtros normales (texto)
+      const filterToUse = validTextFilters.includes(filterBy) ? filterBy : 'nombre';
+      let filtered = all || [];
 
-      const validTextFilters = [
-        'nombre', 'codigo', 'categoria', 'precio_publico', 'precio_medico', 'laboratorio'
-      ];
-
-      if (cleanSearch !== '') {
-        const filterToUse = validTextFilters.includes(filterBy) ? filterBy : 'nombre';
-        params.set('filter_by', filterToUse);
-        params.set('search', cleanSearch);
+      if (term !== '') {
+        filtered = filtered.filter((p) => {
+          const value = p?.[filterToUse];
+          return String(value ?? '').toLowerCase().includes(term);
+        });
       }
 
-      const { data } = await api.get(`/productos?${params.toString()}`);
-      setProductos(data.data || []);
-      setCurrentPage(data.current_page || 1);
-      setLastPage(data.last_page || 1);
+      paginarCliente(filtered, page);
+    };
+
+    try {
+      // Si ya tenemos cache, paginar/filtrar sin red (fluido)
+      if (productosAllCacheRef.current) {
+        applyFiltersAndPaginate(productosAllCacheRef.current);
+        return;
+      }
+
+      // Si no hay cache, se carga una sola vez
+      setLoading(true);
+
+      const resp = await api.get('/productos-all');
+      const all = Array.isArray(resp.data) ? resp.data : [];
+      productosAllCacheRef.current = all;
+
+      applyFiltersAndPaginate(all);
     } catch (err) {
       if (err?.response?.status === 401) {
         openErrorModal('Sesión expirada', 'Tu sesión ha expirado. Inicia sesión nuevamente.');
@@ -162,7 +265,6 @@ const Consulta = () => {
         return;
       }
       setError('Error al cargar los productos');
-      // eslint-disable-next-line no-console
       console.error('Error cargando productos:', err?.response?.data || err?.message);
       setProductos([]);
       setCurrentPage(1);
@@ -170,16 +272,123 @@ const Consulta = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, filterBy, navigate]);
+  }, [filterBy, searchTerm, navigate, openErrorModal, paginarCliente]);
+
+  // ✅ Ahora sí: incluye fetchProductos en dependencias (corrige warning eslint)
+  const updateEstadoRegistroBulk = useCallback(async (nuevoEstado) => {
+    const nuevo = String(nuevoEstado ?? '').trim();
+    if (!nuevo) {
+      openErrorModal('Campo requerido', 'Por favor selecciona un Estado Registro.');
+      return;
+    }
+
+    // Asegurar que tenemos el catálogo completo para encontrar los productos por id
+    try {
+      if (!productosAllCacheRef.current) {
+        const resp = await api.get('/productos-all');
+        productosAllCacheRef.current = Array.isArray(resp.data) ? resp.data : [];
+      }
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        openErrorModal('Sesión expirada', 'Tu sesión ha expirado. Inicia sesión nuevamente.');
+        navigate('/');
+        return;
+      }
+      console.error('No se pudo cargar productos-all:', err?.response?.data || err?.message);
+      openErrorModal('Error', 'No fue posible preparar la actualización. Intenta nuevamente.');
+      return;
+    }
+
+    const all = productosAllCacheRef.current || [];
+    const selectedProducts = all.filter((p) => selectedIds.has(p?.id));
+
+    if (selectedProducts.length === 0) {
+      openErrorModal('Sin selección', 'Selecciona al menos un producto.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const results = await Promise.allSettled(
+        selectedProducts.map((p) => {
+          const payload = buildProductoUpdatePayload(p, { estado_registro: nuevo });
+          return api.put(`/productos/${p.id}`, payload);
+        })
+      );
+
+      const rejected = results.filter((r) => r.status === 'rejected');
+
+      if (rejected.length > 0) {
+        console.error(
+          'Error actualizando estado_registro (bulk):',
+          rejected.map((r) => r.reason?.response?.data || r.reason)
+        );
+
+        const first = rejected[0]?.reason;
+        if (first?.response?.status === 401) {
+          openErrorModal('Sesión expirada', 'Tu sesión ha expirado. Inicia sesión nuevamente.');
+          navigate('/');
+          return;
+        }
+
+        openErrorModal(
+          'Error al actualizar',
+          'No fue posible actualizar el Estado Registro en uno o más productos. Revisa la consola para ver el detalle.'
+        );
+        return;
+      }
+
+      openSuccessModal(
+        'Actualización completada',
+        `Se actualizó el Estado Registro en ${selectedProducts.length} producto(s).`
+      );
+      await logAction(`Actualizó Estado Registro (bulk) en ${selectedProducts.length} producto(s)`);
+
+      // invalidar cache para refrescar listado
+      productosAllCacheRef.current = null;
+
+      // refrescar vista y limpiar selección
+      clearSelection();
+      setShowBulkEstadoModal(false);
+      setBulkEstadoRegistro('');
+
+      fetchProductos(currentPage);
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        openErrorModal('Sesión expirada', 'Tu sesión ha expirado. Inicia sesión nuevamente.');
+        navigate('/');
+        return;
+      }
+      console.error('Error actualizando estado_registro (bulk):', err?.response?.data || err);
+      openErrorModal(
+        'Error al actualizar',
+        'No fue posible actualizar el Estado Registro. Revisa la conexión e intenta nuevamente.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    buildProductoUpdatePayload,
+    clearSelection,
+    currentPage,
+    fetchProductos,
+    logAction,
+    navigate,
+    openErrorModal,
+    openSuccessModal,
+    selectedIds
+  ]);
 
   useEffect(() => {
     fetchProductos(currentPage);
   }, [currentPage, fetchProductos]);
 
-  // ======= Handlers básicos =======
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
+    clearSelection();
   };
 
   const handleFilterByChange = (e) => {
@@ -187,17 +396,152 @@ const Consulta = () => {
     setFilterBy(val);
     setCurrentPage(1);
     if (val === 'inactivo') setSearchTerm('');
+    clearSelection();
   };
+
+  // Texto “Mostrando X - Y de …”
+  const showing = useMemo(() => {
+    const totalKnown = (currentPage - 1) * PAGE_SIZE + (productos?.length || 0);
+    const start = productos.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
+    const end = (currentPage - 1) * PAGE_SIZE + (productos?.length || 0);
+    return { start, end, totalKnown };
+  }, [currentPage, productos]);
+
+  // ===== Documentos asociados =====
+  const fetchProductDocs = useCallback(async (producto) => {
+    if (!producto || !producto.codigo) {
+      setProductDocs([]);
+      setErrorProductDocs(null);
+      return;
+    }
+    setLoadingProductDocs(true);
+    setErrorProductDocs(null);
+    try {
+      const { data } = await api.get('/documentos', {
+        params: { producto_codigo: producto.codigo }
+      });
+      setProductDocs(Array.isArray(data?.data) ? data.data : []);
+    } catch (err) {
+      console.error('Error cargando documentos del producto:', err?.response?.data || err?.message);
+      setErrorProductDocs('Error al cargar los documentos asociados.');
+      setProductDocs([]);
+    } finally {
+      setLoadingProductDocs(false);
+    }
+  }, []);
+
+  // ===== Productos asociados (reemplazos) =====
+  const fetchRelatedProducts = useCallback(async (producto) => {
+    setRelatedProducts([]);
+    setErrorRelatedProducts(null);
+
+    const codigos = normalizarCodigosAsociados(producto?.productos_asociados ?? producto?.productos_relacionados);
+    if (!producto || codigos.length === 0) return;
+
+    setLoadingRelatedProducts(true);
+    try {
+      if (!productosAllCacheRef.current) {
+        const resp = await api.get('/productos-all');
+        productosAllCacheRef.current = Array.isArray(resp.data) ? resp.data : [];
+      }
+
+      const all = productosAllCacheRef.current || [];
+      const setCodigos = new Set(codigos.map((c) => String(c).trim()));
+      const encontrados = all.filter((p) => setCodigos.has(String(p?.codigo ?? '').trim()));
+
+      const mapByCode = new Map(encontrados.map((p) => [String(p.codigo).trim(), p]));
+      const ordered = codigos.map((c) => mapByCode.get(String(c).trim())).filter(Boolean);
+
+      setRelatedProducts(ordered);
+    } catch (err) {
+      console.error('Error cargando productos asociados:', err?.response?.data || err?.message);
+      setErrorRelatedProducts('Error al cargar los productos asociados.');
+      setRelatedProducts([]);
+    } finally {
+      setLoadingRelatedProducts(false);
+    }
+  }, []);
+
+  const fetchProductDocs2 = useCallback(async (producto) => {
+    if (!producto || !producto.codigo) {
+      setRelatedProductDocs2([]);
+      setErrorRelatedProductDocs2(null);
+      return;
+    }
+    setLoadingRelatedProductDocs2(true);
+    setErrorRelatedProductDocs2(null);
+    try {
+      const { data } = await api.get('/documentos', {
+        params: { producto_codigo: producto.codigo }
+      });
+      setRelatedProductDocs2(Array.isArray(data?.data) ? data.data : []);
+    } catch (err) {
+      console.error('Error cargando documentos del producto (modal relacionado):', err?.response?.data || err?.message);
+      setErrorRelatedProductDocs2('Error al cargar los documentos asociados.');
+      setRelatedProductDocs2([]);
+    } finally {
+      setLoadingRelatedProductDocs2(false);
+    }
+  }, []);
+
+  const fetchRelatedProducts2 = useCallback(async (producto) => {
+    setRelatedProducts2([]);
+    setErrorRelatedProducts2(null);
+
+    const codigos = normalizarCodigosAsociados(producto?.productos_asociados ?? producto?.productos_relacionados);
+    if (!producto || codigos.length === 0) return;
+
+    setLoadingRelatedProducts2(true);
+    try {
+      if (!productosAllCacheRef.current) {
+        const resp = await api.get('/productos-all');
+        productosAllCacheRef.current = Array.isArray(resp.data) ? resp.data : [];
+      }
+
+      const all = productosAllCacheRef.current || [];
+      const setCodigos = new Set(codigos.map((c) => String(c).trim()));
+      const encontrados = all.filter((p) => setCodigos.has(String(p?.codigo ?? '').trim()));
+
+      const mapByCode = new Map(encontrados.map((p) => [String(p.codigo).trim(), p]));
+      const ordered = codigos.map((c) => mapByCode.get(String(c).trim())).filter(Boolean);
+
+      setRelatedProducts2(ordered);
+    } catch (err) {
+      console.error('Error cargando productos asociados (modal relacionado):', err?.response?.data || err?.message);
+      setErrorRelatedProducts2('Error al cargar los productos asociados.');
+      setRelatedProducts2([]);
+    } finally {
+      setLoadingRelatedProducts2(false);
+    }
+  }, []);
 
   const handleViewClick = (producto) => {
     setViewingProduct(producto);
     setShowViewModal(true);
+    fetchProductDocs(producto);
+    fetchRelatedProducts(producto);
+  };
+
+  const handleOpenRelatedProduct = (productoRelacionado) => {
+    if (!productoRelacionado) return;
+
+    setViewingRelatedProduct(productoRelacionado);
+    setShowRelatedViewModal(true);
+
+    fetchProductDocs2(productoRelacionado);
+    fetchRelatedProducts2(productoRelacionado);
   };
 
   const handleEditClick = (producto) => {
     setIsNewProduct(false);
     setEditingProduct(producto);
-    setFormData({ ...producto });
+
+    const codigos = normalizarCodigosAsociados(producto?.productos_asociados ?? producto?.productos_relacionados);
+    setFormData({
+      ...producto,
+      productos_asociados: codigos.join(', ')
+    });
+
     setShowEditModal(true);
   };
 
@@ -208,7 +552,8 @@ const Consulta = () => {
       codigo: '', nombre: '', david: '', categoria: '', laboratorio: '',
       registro_sanitario: '', fecha_vencimiento: '', estado_registro: '',
       estado_producto: '', precio_publico: '', precio_medico: '',
-      iva: '', formula_medica: ''
+      iva: '', formula_medica: '',
+      productos_asociados: ''
     });
     setShowEditModal(true);
   };
@@ -218,7 +563,6 @@ const Consulta = () => {
     setShowDeleteModal(true);
   };
 
-  // ======= Eliminar producto + log =======
   const handleConfirmDelete = async () => {
     if (!productToDelete) return;
     setLoading(true);
@@ -232,6 +576,9 @@ const Consulta = () => {
       setShowDeleteModal(false);
       setProductToDelete(null);
 
+      // invalidar cache para que el listado quede actualizado
+      productosAllCacheRef.current = null;
+
       const nextPage = (productos.length === 1 && currentPage > 1) ? currentPage - 1 : currentPage;
       fetchProductos(nextPage);
     } catch (err) {
@@ -241,46 +588,38 @@ const Consulta = () => {
         return;
       }
       setError('Error al eliminar el producto');
-      // eslint-disable-next-line no-console
       console.error('Delete error:', err?.response?.data || err?.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ======= Form =======
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // ======= Validación de código duplicado =======
   const existeCodigo = async (codigo) => {
     const normalize = (v) => String(v ?? '').trim();
     const code = normalize(codigo);
     if (!code) return false;
 
-    // 1) Chequeo local contra la página actual
     const localHit = productos.some(p => normalize(p.codigo) === code);
     if (localHit) return true;
 
-    // 2) Confirmación remota
     try {
       const resAll = await api.get('/productos-all');
       const all = Array.isArray(resAll.data) ? resAll.data : [];
       return all.some(p => normalize(p.codigo) === code);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.warn('No se pudo confirmar duplicado con productos-all:', e?.response?.data || e?.message);
-      return false; // no bloquear
+      return false;
     }
   };
 
-  // ======= Crear/Actualizar + log =======
   const handleSaveChanges = async () => {
     setLoading(true);
     try {
-      // Normalizar y limpiar formData
       const cleanFormData = Object.fromEntries(
         Object.entries(formData).map(([key, value]) => [
           key,
@@ -291,7 +630,11 @@ const Consulta = () => {
         cleanFormData.iva = normalizarIVANumero(cleanFormData.iva);
       }
 
-      // Validación preventiva SOLO para creación
+      if ('productos_asociados' in cleanFormData) {
+        const codigos = normalizarCodigosAsociados(cleanFormData.productos_asociados);
+        cleanFormData.productos_asociados = codigos.join(', ');
+      }
+
       if (isNewProduct) {
         const dup = await existeCodigo(cleanFormData.codigo);
         if (dup) {
@@ -316,6 +659,9 @@ const Consulta = () => {
         await logAction(`Actualizó el producto ID ${editingProduct.id} (${cleanFormData.nombre || editingProduct?.nombre || editingProduct?.codigo || ''})`);
       }
 
+      // invalidar cache para refrescar listado
+      productosAllCacheRef.current = null;
+
       fetchProductos(currentPage);
     } catch (errorResp) {
       if (errorResp?.response?.status === 401) {
@@ -323,7 +669,6 @@ const Consulta = () => {
         navigate('/');
         return;
       }
-      // eslint-disable-next-line no-console
       console.error('Error guardando producto:', errorResp?.response?.data || errorResp?.message);
       if (errorResp?.response?.data?.errors) {
         const errorMsg = Object.values(errorResp.response.data.errors).flat().join(', ');
@@ -332,10 +677,7 @@ const Consulta = () => {
         const body = errorResp?.response?.data;
         const texto = (typeof body === 'string' ? body : JSON.stringify(body || {})).toLowerCase();
         if (texto.includes('unique') || texto.includes('duplic') || texto.includes('23000')) {
-          openErrorModal(
-            'Código duplicado',
-            `El código "${formData.codigo}" ya está registrado.`
-          );
+          openErrorModal('Código duplicado', `El código "${formData.codigo}" ya está registrado.`);
         } else {
           setError(isNewProduct ? 'Error al crear el producto' : 'Error al actualizar el producto');
         }
@@ -345,7 +687,6 @@ const Consulta = () => {
     }
   };
 
-  // ======= Exportar Excel + log =======
   const handleExportExcel = async () => {
     try {
       const response = await api.get('/productos-all', {
@@ -367,7 +708,10 @@ const Consulta = () => {
         Registro_Sanitario: producto.registro_sanitario,
         Fecha_Vencimiento: producto.fecha_vencimiento,
         Estado_Registro: producto.estado_registro,
-        DAVID: producto.david
+        DAVID: producto.david,
+        Productos_Asociados: Array.isArray(producto.productos_asociados)
+          ? producto.productos_asociados.join(', ')
+          : (producto.productos_asociados || '')
       }));
 
       const ws = XLSX.utils.json_to_sheet(data);
@@ -383,13 +727,11 @@ const Consulta = () => {
         navigate('/');
         return;
       }
-      // eslint-disable-next-line no-console
       console.error('Error al exportar Excel:', errorResp);
       setError('Error al exportar los productos.');
     }
   };
 
-  // ======= IMPORT PREVIEW =======
   const handleImportPreview = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -432,9 +774,12 @@ const Consulta = () => {
         }
       };
 
-      // quitar duplicados entre crear/actualizar/eliminar
-      const codigosActualizar = new Set(processedData.actualizar.map(x => String(x.codigo ?? x?.datos?.codigo ?? '').trim()).filter(Boolean));
-      const codigosEliminar = new Set(processedData.eliminar.map(x => String(x.codigo ?? '').trim()).filter(Boolean));
+      const codigosActualizar = new Set(
+        processedData.actualizar.map(x => String(x.codigo ?? x?.datos?.codigo ?? '').trim()).filter(Boolean)
+      );
+      const codigosEliminar = new Set(
+        processedData.eliminar.map(x => String(x.codigo ?? '').trim()).filter(Boolean)
+      );
 
       const crearFiltrado = processedData.crear.filter(item => {
         const code = String(item.codigo ?? item?.datos?.codigo ?? '').trim();
@@ -444,7 +789,11 @@ const Consulta = () => {
 
       processedData.crear = crearFiltrado;
 
-      if (processedData.errores.length > 0 && processedData.metadata.total_filas && processedData.errores.length === processedData.metadata.total_filas) {
+      if (
+        processedData.errores.length > 0 &&
+        processedData.metadata.total_filas &&
+        processedData.errores.length === processedData.metadata.total_filas
+      ) {
         throw new Error('El archivo contiene errores en todas las filas. Revise el formato.');
       }
 
@@ -469,7 +818,6 @@ const Consulta = () => {
       }
 
       setError(errorMsg);
-      // eslint-disable-next-line no-console
       console.error('Detalles del error import-preview:', {
         error: err.message,
         response: err.response?.data,
@@ -482,7 +830,6 @@ const Consulta = () => {
     }
   };
 
-  // ======= Helper errores import-confirm =======
   const handleImportError = (err) => {
     let errorMsg = 'Error al confirmar importación';
     if (err.code === 'ECONNABORTED') {
@@ -493,13 +840,12 @@ const Consulta = () => {
         case 404: errorMsg = 'Ruta no encontrada o método bloqueado (404)'; break;
         case 405: errorMsg = 'Método no permitido (405)'; break;
         case 422: errorMsg = err.response.data.message || 'Datos de validación incorrectos'; break;
-        default:  errorMsg = err.response.data?.message || `Error del servidor (${err.response.status})`;
+        default: errorMsg = err.response.data?.message || `Error del servidor (${err.response.status})`;
       }
     } else if (err.message?.toLowerCase().includes('token')) {
       errorMsg = 'Problema de autenticación - Vuelve a iniciar sesión';
     }
     setError(errorMsg);
-    // eslint-disable-next-line no-console
     console.error('Detalles del error import-confirm:', {
       message: err.message,
       status: err.response?.status,
@@ -508,7 +854,6 @@ const Consulta = () => {
     });
   };
 
-  // ======= Confirmación de importación + log =======
   const handleConfirmImport = async () => {
     if (!importPreview) {
       setError('No hay datos de importación para confirmar');
@@ -528,7 +873,6 @@ const Consulta = () => {
         eliminar: importPreview.eliminar.map(item => ({ codigo: item.codigo || item }))
       };
 
-      // ✅ Cambiado: usar SOLO POST para evitar el 404 en consola
       const response = await api.post('/productos/import-confirm', payload, { timeout: 30000 });
 
       if (!response?.data) {
@@ -544,7 +888,12 @@ const Consulta = () => {
       openSuccessModal('✅ Importación completada', msg);
 
       await logAction('Confirmó importación de productos desde Excel');
+
+      // invalidar cache para que el listado quede actualizado
+      productosAllCacheRef.current = null;
+
       await fetchProductos(1);
+      setCurrentPage(1);
 
     } catch (err) {
       if (err?.response?.status === 401) {
@@ -559,9 +908,20 @@ const Consulta = () => {
     }
   };
 
-  // ======================
-  // Render
-  // ======================
+  const openDocumento = (doc) => {
+    const rawPath =
+      doc.ruta ||
+      doc.path ||
+      doc.archivo ||
+      doc.file_path ||
+      doc.storage_path;
+
+    if (!rawPath) return;
+
+    const url = `${FILE_PROXY}?path=${encodeURIComponent(rawPath)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="consulta-layout">
       <Navbar expand="lg" className="consulta-header">
@@ -571,7 +931,7 @@ const Consulta = () => {
             <span
               className="consulta-title"
               role="link"
-              style={{ cursor: 'pointer'}}
+              style={{ cursor: 'pointer' }}
               onClick={() => navigate('/admin')}
               title="Ir al panel de administración"
             >
@@ -591,139 +951,327 @@ const Consulta = () => {
               Gestión de Productos
             </h2>
 
-            <div className="d-flex flex-column flex-md-row gap-2 mb-4">
-              <Button variant="info" onClick={() => setShowInstructions(true)}>
-                Instrucciones
-              </Button>
-              <Button onClick={handleCreateClick} disabled={loading}>+ Crear Producto</Button>
-              <Button variant="success" onClick={handleExportExcel}>Exportar Excel</Button>
-              <Button variant="warning" onClick={() => document.getElementById('fileInputExcel').click()}>
-                Importar Excel
-              </Button>
-              <input
-                id="fileInputExcel"
-                type="file"
-                accept=".xlsx, .xls"
-                style={{ display: 'none' }}
-                onChange={handleImportPreview}
-              />
+            <div className="rs-filters-panel mb-3">
+              <Row className="g-2 align-items-end">
+                <Col xs={12} lg="auto" className="d-flex flex-wrap gap-2">
+                  <Button variant="info" onClick={() => setShowInstructions(true)}>
+                    Instrucciones
+                  </Button>
+                  <Button onClick={handleCreateClick} disabled={loading}>
+                    + Crear Producto
+                  </Button>
+                  <Button variant="success" onClick={handleExportExcel}>
+                    Exportar Excel
+                  </Button>
+                  <Button
+                    variant="warning"
+                    onClick={() => document.getElementById('fileInputExcel').click()}
+                    disabled={loading}
+                  >
+                    Importar Excel
+                  </Button>
 
-              {/* Barra de búsqueda y filtros */}
-              <Form className="d-flex flex-column flex-md-row gap-2 flex-grow-1">
-                <FormControl
-                  type="text"
-                  placeholder={
-                    filterBy === 'david'
-                      ? 'Buscar por DAVID... (vacío = ver todos con DAVID)'
-                      : filterBy === 'laboratorio'
-                      ? 'Buscar por laboratorio...'
-                      : 'Buscar por nombre, laboratorio o código...'
-                  }
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  disabled={filterBy === 'inactivo'}
-                />
-                <Form.Select
-                  value={filterBy}
-                  onChange={handleFilterByChange}
-                >
-                  <option value="nombre">Nombre</option>
-                  <option value="codigo">Código</option>
-                  <option value="categoria">Categoría</option>
-                  <option value="laboratorio">Laboratorio</option>
-                  <option value="david">DAVID</option>
-                  <option value="inactivo">INACTIVO</option>
-                </Form.Select>
-              </Form>
+                  {/* Botón bulk */}
+                  <Button
+                    variant="primary"
+                    disabled={selectedCount === 0 || loading}
+                    onClick={() => setShowBulkEstadoModal(true)}
+                    title={selectedCount === 0 ? 'Selecciona uno o más productos' : 'Editar Estado Registro'}
+                  >
+                    Editar Estado Registro{selectedCount > 0 ? ` (${selectedCount})` : ''}
+                  </Button>
+
+                  <input
+                    id="fileInputExcel"
+                    type="file"
+                    accept=".xlsx, .xls"
+                    style={{ display: 'none' }}
+                    onChange={handleImportPreview}
+                  />
+                </Col>
+
+                <Col xs={12} lg className="ms-lg-auto">
+                  <Row className="g-2 align-items-end">
+                    <Col xs={12} md={8}>
+                      <Form.Label className="fw-semibold mb-1">Búsqueda</Form.Label>
+                      <FormControl
+                        type="text"
+                        placeholder={
+                          filterBy === 'david'
+                            ? 'Buscar por DAVID... (vacío = ver todos con DAVID)'
+                            : filterBy === 'laboratorio'
+                              ? 'Buscar por laboratorio...'
+                              : 'Buscar por nombre, laboratorio o código...'
+                        }
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        disabled={filterBy === 'inactivo'}
+                      />
+                    </Col>
+
+                    <Col xs={12} md={4}>
+                      <Form.Label className="fw-semibold mb-1">Buscar por</Form.Label>
+                      <Form.Select value={filterBy} onChange={handleFilterByChange}>
+                        <option value="nombre">Nombre</option>
+                        <option value="codigo">Código</option>
+                        <option value="categoria">Categoría</option>
+                        <option value="laboratorio">Laboratorio</option>
+                        <option value="david">DAVID</option>
+                        <option value="inactivo">INACTIVO</option>
+                      </Form.Select>
+                    </Col>
+                  </Row>
+                </Col>
+              </Row>
             </div>
 
-            {loading && <div className="text-center mb-3">Cargando productos...</div>}
+            {loading && (
+              <div className="text-center mb-3">
+                <Spinner animation="border" size="sm" className="me-2" />
+                Cargando productos...
+              </div>
+            )}
             {error && <Alert variant="danger">{error}</Alert>}
 
-            <div className="product-list">
+            <Row className="g-3 rs-grid">
               {productos.length > 0 ? (
-                productos.map((producto, index) => (
-                  <div
-                    className={`product-card ${producto.estado_producto?.toLowerCase() === 'inactivo' ? 'inactive' : ''}`}
-                    key={index}
-                  >
-                    <div className="product-info">
-                      <p><strong>Nombre:</strong> {producto.nombre}</p>
-                      <p><strong>Precio Público con IVA:</strong> {mostrarPrecio(producto.precio_publico)}</p>
-                      <p><strong>Precio Médico con IVA:</strong> {mostrarPrecio(producto.precio_medico)}</p>
-                    </div>
-                    <div className="card-actions">
-                      <Button size="sm" variant="info" onClick={() => handleViewClick(producto)}>Ver</Button>
-                      <Button size="sm" variant="primary" onClick={() => handleEditClick(producto)}>Editar</Button>
-                      <Button size="sm" variant="danger" onClick={() => confirmDelete(producto)}>Eliminar</Button>
-                    </div>
-                  </div>
-                ))
+                productos.map((producto, index) => {
+                  const inactive = producto.estado_producto?.toLowerCase() === 'inactivo';
+                  const isSelected = selectedIds.has(producto?.id);
+
+                  // ✅ Si el filtro activo es "inactivo", borde rojo para TODAS las cards mostradas
+                  const isInactivoFilter = filterBy === 'inactivo';
+
+                  return (
+                    <Col
+                      key={producto.id ?? producto.codigo ?? index}
+                      xs={12}
+                      sm={6}
+                      lg={4}
+                      xl={3}
+                      className="d-flex"
+                    >
+                      <div
+                        className={`rs-card w-100 ${inactive ? 'rs-card--inactive' : ''}`}
+                        style={{
+                          // Borde rojo cuando filtras por INACTIVO
+                          ...(isInactivoFilter
+                            ? { border: '2px solid #dc3545' }
+                            : null),
+
+                          // Mantener el resaltado azul de selección (tu outline actual)
+                          ...(isSelected
+                            ? { outline: '3px solid #0d6efd', outlineOffset: '2px' }
+                            : null),
+
+                          position: 'relative'
+                        }}
+                      >
+                        {/* Checkbox selección (sin texto) */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 10,
+                            right: 10,
+                            zIndex: 2,
+                            background: 'rgba(255,255,255,0.9)',
+                            borderRadius: 8,
+                            padding: '4px 8px',
+                            border: '1px solid rgba(0,0,0,0.08)',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Form.Check
+                            type="checkbox"
+                            id={`select-${producto.id ?? producto.codigo ?? index}`}
+                            checked={isSelected}
+                            onChange={() => toggleSelected(producto?.id)}
+                            aria-label="Seleccionar producto"
+                          />
+                        </div>
+
+                        <div className="rs-card-body">
+                          <div className="rs-name">
+                            {producto.nombre || '-'}
+                          </div>
+
+                          <div className="rs-line">
+                            <strong>Precio Público con IVA:</strong> {mostrarPrecio(producto.precio_publico) || '-'}
+                          </div>
+
+                          <div className="rs-line">
+                            <strong>Precio Médico con IVA:</strong> {mostrarPrecio(producto.precio_medico) || '-'}
+                          </div>
+
+                          <div className="rs-line">
+                            <strong>Código:</strong> {producto.codigo || '-'}
+                          </div>
+
+                          <div className="rs-line">
+                            <strong>Laboratorio:</strong> {producto.laboratorio || '-'}
+                          </div>
+
+                          <div className="rs-line">
+                            <strong>Estado producto:</strong> {producto.estado_producto || '-'}
+                          </div>
+
+                          <div className="mt-auto d-flex gap-2 flex-wrap justify-content-center">
+                            <Button
+                              size="sm"
+                              variant="info"
+                              onClick={(e) => { e.stopPropagation(); handleViewClick(producto); }}
+                            >
+                              Ver
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={(e) => { e.stopPropagation(); handleEditClick(producto); }}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={(e) => { e.stopPropagation(); confirmDelete(producto); }}
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </Col>
+                  );
+                })
               ) : (
-                <p className="text-center">No hay productos disponibles</p>
+                <Col xs={12}>
+                  <p className="text-center mb-0">No hay productos disponibles</p>
+                </Col>
               )}
-            </div>
+            </Row>
+
 
             {lastPage > 1 && (
-              <div className="pagination-wrapper mt-3 d-flex justify-content-center align-items-center gap-2">
-                {/* Primera página */}
-                <button
-                  className={`pagination-btn ${loading ? 'opacity-50' : ''}`}
-                  onClick={() => fetchProductos(1)}
-                  disabled={currentPage === 1 || loading}
-                  aria-label="Primera página"
-                  title="Primera página"
-                >
-                  <i className="bi bi-skip-backward-fill"></i>
-                </button>
+              <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mt-3 gap-2">
+                <div style={{ fontSize: '0.95rem' }}>
+                  Mostrando{' '}
+                  <strong>
+                    {productos.length === 0 ? 0 : showing.start}
+                    {' - '}
+                    {showing.end}
+                  </strong>{' '}
+                  de <strong>{(currentPage < lastPage) ? `más de ${showing.totalKnown}` : showing.totalKnown}</strong>
+                </div>
 
-                {/* Anterior */}
-                <button
-                  className={`pagination-btn ${loading ? 'opacity-50' : ''}`}
-                  onClick={() => fetchProductos(currentPage - 1)}
-                  disabled={currentPage === 1 || loading}
-                  aria-label="Página anterior"
-                  title="Página anterior"
-                >
-                  <i className="bi bi-chevron-left"></i>
-                </button>
+                <div className="d-flex gap-2 flex-wrap justify-content-center">
+                  <Button
+                    variant="outline-light"
+                    onClick={() => fetchProductos(1)}
+                    disabled={currentPage === 1 || loading}
+                    title="Primera página"
+                  >
+                    ⏮
+                  </Button>
 
-                <span className="pagination-info">
-                  {loading ? (
-                    <Spinner animation="border" size="sm" />
-                  ) : (
-                    `${currentPage} / ${lastPage}`
-                  )}
-                </span>
+                  <Button
+                    variant="outline-light"
+                    onClick={() => fetchProductos(currentPage - 1)}
+                    disabled={currentPage === 1 || loading}
+                    title="Página anterior"
+                  >
+                    ◀
+                  </Button>
 
-                {/* Siguiente */}
-                <button
-                  className={`pagination-btn ${loading ? 'opacity-50' : ''}`}
-                  onClick={() => fetchProductos(currentPage + 1)}
-                  disabled={currentPage === lastPage || loading}
-                  aria-label="Página siguiente"
-                  title="Página siguiente"
-                >
-                  <i className="bi bi-chevron-right"></i>
-                </button>
+                  <Button variant="light" disabled title="Página actual">
+                    {loading ? (
+                      <Spinner animation="border" size="sm" />
+                    ) : (
+                      `${currentPage} / ${lastPage}`
+                    )}
+                  </Button>
 
-                {/* Última página */}
-                <button
-                  className={`pagination-btn ${loading ? 'opacity-50' : ''}`}
-                  onClick={() => fetchProductos(lastPage)}
-                  disabled={currentPage === lastPage || loading}
-                  aria-label="Última página"
-                  title="Última página"
-                >
-                  <i className="bi bi-skip-forward-fill"></i>
-                </button>
+                  <Button
+                    variant="outline-light"
+                    onClick={() => fetchProductos(currentPage + 1)}
+                    disabled={currentPage === lastPage || loading}
+                    title="Página siguiente"
+                  >
+                    ▶
+                  </Button>
+
+                  <Button
+                    variant="outline-light"
+                    onClick={() => fetchProductos(lastPage)}
+                    disabled={currentPage === lastPage || loading}
+                    title="Última página"
+                  >
+                    ⏭
+                  </Button>
+                </div>
               </div>
             )}
           </Card.Body>
         </Card>
       </Container>
 
-      {/* Modal VER */}
+      {/* Modal editar SOLO Estado Registro (bulk) */}
+      <Modal
+        show={showBulkEstadoModal}
+        onHide={() => !loading && setShowBulkEstadoModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Editar Estado Registro</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Alert variant="info" className="mb-3">
+            Se actualizará el <b>Estado Registro</b> de <b>{selectedCount}</b> producto(s).
+          </Alert>
+
+          <Form.Group>
+            <Form.Label>Nuevo Estado Registro</Form.Label>
+            <Form.Select
+              value={bulkEstadoRegistro}
+              onChange={(e) => setBulkEstadoRegistro(e.target.value)}
+              disabled={loading}
+            >
+              <option value="">Selecciona...</option>
+              <option value="vigente">vigente</option>
+              <option value="vencido">vencido</option>
+              <option value="en tramite de renovacion">en tramite de renovacion</option>
+              <option value="suspendido">suspendido</option>
+              <option value="no requiere">no requiere</option>
+            </Form.Select>
+            <div className="text-muted mt-2" style={{ fontSize: '0.85rem' }}>
+              Solo se modificará el campo <b>estado_registro</b>. El resto de campos se envían únicamente para evitar error 422 del backend.
+            </div>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer className="d-flex gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setShowBulkEstadoModal(false)}
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => updateEstadoRegistroBulk(bulkEstadoRegistro)}
+            disabled={loading || selectedCount === 0}
+          >
+            {loading ? 'Guardando...' : 'Guardar'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* =======================
+          MODALES (sin cambios)
+         ======================= */}
+
+      {/* Modal VER (Producto inicial) */}
       <Modal
         show={showViewModal}
         onHide={() => setShowViewModal(false)}
@@ -736,10 +1284,7 @@ const Consulta = () => {
 
           return (
             <>
-              <Modal.Header
-                closeButton
-                style={{ backgroundColor: headerColor, color: '#fff' }}
-              >
+              <Modal.Header closeButton style={{ backgroundColor: headerColor, color: '#fff' }}>
                 <Modal.Title className="d-flex align-items-center gap-2">
                   Detalles del Producto
                   {isInactive && (
@@ -768,7 +1313,6 @@ const Consulta = () => {
               <Modal.Body style={{ background: '#f6f8fb' }}>
                 {viewingProduct && (
                   <Row className="g-3">
-                    {/* Panel Izquierdo */}
                     <Col md={6}>
                       <Card className="h-100 shadow-sm border-0">
                         <Card.Body className="p-3">
@@ -790,28 +1334,288 @@ const Consulta = () => {
                       </Card>
                     </Col>
 
-                    {/* Panel Derecho (DAVID) */}
                     <Col md={6}>
                       <Card className="h-100 shadow-sm border-0">
-                        <Card.Header
-                          className="bg-white"
-                          style={{ borderBottom: '1px solid #eef1f5' }}
-                        >
+                        <Card.Header className="bg-white" style={{ borderBottom: '1px solid #eef1f5' }}>
                           <h5 className="mb-0 d-flex align-items-center gap-2">
                             <i className="bi bi-journal-text"></i> DAVID
                           </h5>
                         </Card.Header>
                         <Card.Body className="p-3">
-                          <div
-                            style={{
-                              whiteSpace: 'pre-wrap',
-                              lineHeight: 1.6,
-                              maxHeight: '48vh',
-                              overflowY: 'auto'
-                            }}
-                          >
+                          <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, maxHeight: '24vh', overflowY: 'auto' }}>
                             {viewingProduct.david || <span className="text-muted">Sin información</span>}
                           </div>
+
+                          <hr className="my-3" />
+
+                          <h6 className="mb-2 d-flex align-items-center gap-2">
+                            <i className="bi bi-file-earmark-pdf"></i> Documentos asociados
+                          </h6>
+
+                          {loadingProductDocs && (
+                            <div className="text-muted" style={{ fontSize: '0.9rem' }}>
+                              Cargando documentos...
+                            </div>
+                          )}
+
+                          {!loadingProductDocs && errorProductDocs && (
+                            <div className="text-danger" style={{ fontSize: '0.9rem' }}>
+                              {errorProductDocs}
+                            </div>
+                          )}
+
+                          {!loadingProductDocs && !errorProductDocs && (
+                            productDocs.length > 0 ? (
+                              <ul className="list-unstyled mb-0" style={{ maxHeight: '12vh', overflowY: 'auto' }}>
+                                {productDocs.map((doc) => (
+                                  <li key={doc.id} className="d-flex justify-content-between align-items-center mb-1">
+                                    <span style={{ fontSize: '0.9rem' }}>{doc.nombre}</span>
+                                    <Button size="sm" variant="outline-primary" onClick={() => openDocumento(doc)}>
+                                      Ver
+                                    </Button>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <div className="text-muted" style={{ fontSize: '0.9rem' }}>
+                                No hay documentos asociados a este producto.
+                              </div>
+                            )
+                          )}
+
+                          <hr className="my-3" />
+
+                          <h6 className="mb-2 d-flex align-items-center gap-2">
+                            <i className="bi bi-boxes"></i> Productos asociados
+                          </h6>
+
+                          {loadingRelatedProducts && (
+                            <div className="text-muted" style={{ fontSize: '0.9rem' }}>
+                              Cargando productos asociados...
+                            </div>
+                          )}
+
+                          {!loadingRelatedProducts && errorRelatedProducts && (
+                            <div className="text-danger" style={{ fontSize: '0.9rem' }}>
+                              {errorRelatedProducts}
+                            </div>
+                          )}
+
+                          {!loadingRelatedProducts && !errorRelatedProducts && (
+                            relatedProducts.length > 0 ? (
+                              <div style={{ maxHeight: '18vh', overflowY: 'auto' }}>
+                                {relatedProducts.map((p) => (
+                                  <div
+                                    key={p.id || p.codigo}
+                                    className="d-flex justify-content-between align-items-start gap-2 mb-2"
+                                    style={{ fontSize: '0.9rem' }}
+                                  >
+                                    <div className="flex-grow-1">
+                                      <div className="fw-bold">
+                                        {p.nombre}{' '}
+                                        {p.codigo ? (
+                                          <span className="text-muted fw-normal">({p.codigo})</span>
+                                        ) : null}
+                                      </div>
+                                      <div className="text-muted">
+                                        Público: {mostrarPrecio(p.precio_publico)} · Médico: {mostrarPrecio(p.precio_medico)}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline-success"
+                                      onClick={() => handleOpenRelatedProduct(p)}
+                                      title="Ver este producto asociado"
+                                    >
+                                      Ver
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-muted" style={{ fontSize: '0.9rem' }}>
+                                No hay productos asociados para este producto.
+                              </div>
+                            )
+                          )}
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  </Row>
+                )}
+              </Modal.Body>
+            </>
+          );
+        })()}
+      </Modal>
+
+      {/* Modal VER (Producto relacionado) */}
+      <Modal
+        show={showRelatedViewModal}
+        onHide={() => setShowRelatedViewModal(false)}
+        centered
+        dialogClassName="consulta-view-modal"
+      >
+        {(() => {
+          const isInactive = viewingRelatedProduct?.estado_producto?.toLowerCase() === 'inactivo';
+          const headerColor = isInactive ? '#dc3545' : '#0857b3';
+
+          return (
+            <>
+              <Modal.Header closeButton style={{ backgroundColor: headerColor, color: '#fff' }}>
+                <Modal.Title className="d-flex align-items-center gap-2">
+                  Detalles del Producto
+                  {isInactive && (
+                    <span
+                      style={{
+                        background: 'rgba(255,255,255,0.95)',
+                        color: '#dc3545',
+                        border: '1px solid rgba(255,255,255,0.65)',
+                        padding: '4px 10px',
+                        borderRadius: '999px',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      title="Este producto está inactivo"
+                    >
+                      <i className="bi bi-slash-circle"></i>
+                      INACTIVO
+                    </span>
+                  )}
+                </Modal.Title>
+              </Modal.Header>
+
+              <Modal.Body style={{ background: '#f6f8fb' }}>
+                {viewingRelatedProduct && (
+                  <Row className="g-3">
+                    <Col md={6}>
+                      <Card className="h-100 shadow-sm border-0">
+                        <Card.Body className="p-3">
+                          <div className="pe-md-2" style={{ fontSize: '0.98rem' }}>
+                            <p><strong>Nombre:</strong> {viewingRelatedProduct.nombre}</p>
+                            <p><strong>Estado Producto:</strong> {viewingRelatedProduct.estado_producto}</p>
+                            <p><strong>Precio Público con IVA:</strong> {mostrarPrecio(viewingRelatedProduct.precio_publico)}</p>
+                            <p><strong>Precio Médico con IVA:</strong> {mostrarPrecio(viewingRelatedProduct.precio_medico)}</p>
+                            <p><strong>IVA:</strong> {formatearIVA(viewingRelatedProduct.iva)}</p>
+                            <p><strong>Requiere Fórmula Médica:</strong> {viewingRelatedProduct.formula_medica}</p>
+                            <p><strong>Laboratorio:</strong> {viewingRelatedProduct.laboratorio}</p>
+                            <p><strong>Categoría:</strong> {viewingRelatedProduct.categoria}</p>
+                            <p><strong>Estado Registro:</strong> {viewingRelatedProduct.estado_registro}</p>
+                            <p><strong>Fecha Vencimiento registro:</strong> {viewingRelatedProduct.fecha_vencimiento}</p>
+                            <p><strong>Registro Sanitario:</strong> {viewingRelatedProduct.registro_sanitario}</p>
+                            <p className="mb-0"><strong>Código:</strong> {viewingRelatedProduct.codigo}</p>
+                          </div>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+
+                    <Col md={6}>
+                      <Card className="h-100 shadow-sm border-0">
+                        <Card.Header className="bg-white" style={{ borderBottom: '1px solid #eef1f5' }}>
+                          <h5 className="mb-0 d-flex align-items-center gap-2">
+                            <i className="bi bi-journal-text"></i> DAVID
+                          </h5>
+                        </Card.Header>
+                        <Card.Body className="p-3">
+                          <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, maxHeight: '24vh', overflowY: 'auto' }}>
+                            {viewingRelatedProduct.david || <span className="text-muted">Sin información</span>}
+                          </div>
+
+                          <hr className="my-3" />
+
+                          <h6 className="mb-2 d-flex align-items-center gap-2">
+                            <i className="bi bi-file-earmark-pdf"></i> Documentos asociados
+                          </h6>
+
+                          {loadingRelatedProductDocs2 && (
+                            <div className="text-muted" style={{ fontSize: '0.9rem' }}>
+                              Cargando documentos...
+                            </div>
+                          )}
+
+                          {!loadingRelatedProductDocs2 && errorRelatedProductDocs2 && (
+                            <div className="text-danger" style={{ fontSize: '0.9rem' }}>
+                              {errorRelatedProductDocs2}
+                            </div>
+                          )}
+
+                          {!loadingRelatedProductDocs2 && !errorRelatedProductDocs2 && (
+                            relatedProductDocs2.length > 0 ? (
+                              <ul className="list-unstyled mb-0" style={{ maxHeight: '12vh', overflowY: 'auto' }}>
+                                {relatedProductDocs2.map((doc) => (
+                                  <li key={doc.id} className="d-flex justify-content-between align-items-center mb-1">
+                                    <span style={{ fontSize: '0.9rem' }}>{doc.nombre}</span>
+                                    <Button size="sm" variant="outline-primary" onClick={() => openDocumento(doc)}>
+                                      Ver
+                                    </Button>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <div className="text-muted" style={{ fontSize: '0.9rem' }}>
+                                No hay documentos asociados a este producto.
+                              </div>
+                            )
+                          )}
+
+                          <hr className="my-3" />
+
+                          <h6 className="mb-2 d-flex align-items-center gap-2">
+                            <i className="bi bi-boxes"></i> Productos asociados
+                          </h6>
+
+                          {loadingRelatedProducts2 && (
+                            <div className="text-muted" style={{ fontSize: '0.9rem' }}>
+                              Cargando productos asociados...
+                            </div>
+                          )}
+
+                          {!loadingRelatedProducts2 && errorRelatedProducts2 && (
+                            <div className="text-danger" style={{ fontSize: '0.9rem' }}>
+                              {errorRelatedProducts2}
+                            </div>
+                          )}
+
+                          {!loadingRelatedProducts2 && !errorRelatedProducts2 && (
+                            relatedProducts2.length > 0 ? (
+                              <div style={{ maxHeight: '18vh', overflowY: 'auto' }}>
+                                {relatedProducts2.map((p) => (
+                                  <div
+                                    key={p.id || p.codigo}
+                                    className="d-flex justify-content-between align-items-start gap-2 mb-2"
+                                    style={{ fontSize: '0.9rem' }}
+                                  >
+                                    <div className="flex-grow-1">
+                                      <div className="fw-bold">
+                                        {p.nombre}{' '}
+                                        {p.codigo ? (
+                                          <span className="text-muted fw-normal">({p.codigo})</span>
+                                        ) : null}
+                                      </div>
+                                      <div className="text-muted">
+                                        Público: {mostrarPrecio(p.precio_publico)} · Médico: {mostrarPrecio(p.precio_medico)}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline-success"
+                                      onClick={() => handleOpenRelatedProduct(p)}
+                                      title="Ver este producto asociado"
+                                    >
+                                      Ver
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-muted" style={{ fontSize: '0.9rem' }}>
+                                No hay productos asociados para este producto.
+                              </div>
+                            )
+                          )}
                         </Card.Body>
                       </Card>
                     </Col>
@@ -942,6 +1746,26 @@ const Consulta = () => {
                 </Form.Group>
               </Col>
             </Row>
+
+            <Row>
+              <Col md={12}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Productos asociados (códigos)</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    name="productos_asociados"
+                    rows={2}
+                    style={{ resize: 'vertical' }}
+                    placeholder="Ej: 12345, 67890, ABC-001 (separados por coma o salto de línea)"
+                    value={formData.productos_asociados || ''}
+                    onChange={handleInputChange}
+                  />
+                  <div className="mt-1 text-muted" style={{ fontSize: '0.85rem' }}>
+                    Estos productos se mostrarán como reemplazo cuando el producto esté agotado.
+                  </div>
+                </Form.Group>
+              </Col>
+            </Row>
           </Form>
         </Modal.Body>
         <Modal.Footer className="d-flex flex-column flex-md-row gap-2">
@@ -981,7 +1805,9 @@ const Consulta = () => {
                 Descargar plantilla
               </Button>
               <hr />
-              <p className="mb-0 text-muted"><i className="bi bi-info-circle me-2"></i>Si hay errores en el archivo, no se importará.</p>
+              <p className="mb-0 text-muted">
+                <i className="bi bi-info-circle me-2"></i>Si hay errores en el archivo, no se importará.
+              </p>
             </Card.Body>
           </Card>
         </Modal.Body>
@@ -1067,19 +1893,15 @@ const Consulta = () => {
                           return cambios.length > 0 ? (
                             cambios.map((campo, i) => {
                               const valActual = producto.actual ? producto.actual[campo] : undefined;
-                              const valNuevo  = (producto.datos?.[campo] ?? producto.nuevo?.[campo] ?? producto[campo]);
+                              const valNuevo = (producto.datos?.[campo] ?? producto.nuevo?.[campo] ?? producto[campo]);
 
                               return (
                                 <tr key={`update-${index}-${i}`}>
                                   <td>{producto.codigo}</td>
                                   <td>{producto.actual?.nombre || producto.nombre}</td>
                                   <td className="text-capitalize">{String(campo).replace('_', ' ')}</td>
-                                  <td className="text-danger">
-                                    {formatCampoValor(campo, valActual) || 'N/A'}
-                                  </td>
-                                  <td className="text-success">
-                                    {formatCampoValor(campo, valNuevo) || 'N/A'}
-                                  </td>
+                                  <td className="text-danger">{formatCampoValor(campo, valActual) || 'N/A'}</td>
+                                  <td className="text-success">{formatCampoValor(campo, valNuevo) || 'N/A'}</td>
                                 </tr>
                               );
                             })

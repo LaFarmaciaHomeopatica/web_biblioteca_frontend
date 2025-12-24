@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
 import { useAuth } from '../context/AuthContext';
 
-const API_BASE   = `${window.location.origin}/backend/api`; // ✅ base correcta para API
+const API_BASE = `${window.location.origin}/backend/api`; // ✅ base correcta para API
 const FILE_PROXY = `${API_BASE}/documentos/stream`;          // ✅ proxy que sirve PDFs
 
 // Normaliza texto para búsqueda (sin tildes, minúsculas)
@@ -107,11 +107,12 @@ const Vademecum = () => {
     }
   };
 
-  const handleGoToVencimiento = () => navigate('/vencimiento');
+  const handleGoToRegistroSanitariocliente = () => navigate('/registrosanitariocliente');
   const handleGoToLaboratorios = () => navigate('/laboratorios');
   const handleGoToVademecum = () => navigate('/vademecum');
   const handleGoToCapacitacion = () => navigate('/capacitacion');
   const handleGoToDocumentos = () => navigate('/clientedoc');
+  const handleGoToModuloMedico = () => navigate('/modulomedico-cliente');
   const handleLogout = async () => { await logout(); navigate('/'); };
 
   // ✅ MISMA API DE PAGINACIÓN QUE EN documentos.jsx
@@ -143,8 +144,12 @@ const Vademecum = () => {
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="ms-auto d-flex flex-column flex-lg-row gap-2 mt-3 mt-lg-0">
-              <Button onClick={handleGoToVencimiento}>
-                <i className="bi bi-hourglass-split me-1"></i> Vencimiento
+
+              <Button onClick={handleGoToModuloMedico}>
+                <i className="bi bi-heart-pulse me-1"></i> Médicos
+              </Button>
+              <Button onClick={handleGoToRegistroSanitariocliente}>
+                <i className="bi bi-hourglass-split me-1"></i> Registro Sanitario
               </Button>
               <Button onClick={handleGoToLaboratorios}>
                 <i className="bi bi-droplet me-1"></i> Laboratorios

@@ -2,11 +2,22 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
-  Container, Navbar, Button, Spinner, Card, Modal, Form, ProgressBar,
-  Tabs, Tab, InputGroup
+  Container,
+  Navbar,
+  Button,
+  Spinner,
+  Card,
+  Modal,
+  Form,
+  ProgressBar,
+  Tabs,
+  Tab,
+  InputGroup
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/documentos.css';
+import '../assets/clientedoc.css';
+import '../assets/consulta.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
 
@@ -16,9 +27,8 @@ import logo from '../assets/logo.jpeg';
 const ORIGIN = window.location.origin;
 const API_BASE = process.env.REACT_APP_API_URL || `${ORIGIN}/backend/api`;
 const FILE_PROXY = `${API_BASE}/documentos/stream`;   // PDFs
-const VIDEO_PROXY = `${API_BASE}/videos/stream`;       // 🎥 videos
+const VIDEO_PROXY = `${API_BASE}/videos/stream`;      // Videos
 
-// Toma la mejor "ruta" posible desde el objeto (documento o video)
 const pickRuta = (obj) => {
   const keys = ['ruta', 'path', 'archivo', 'file_path', 'storage_path'];
   for (const k of keys) {
@@ -27,7 +37,6 @@ const pickRuta = (obj) => {
   return '';
 };
 
-// Formatea fecha probando varios posibles campos
 const formatFecha = (item) => {
   const raw =
     item?.fecha_subida ||
@@ -42,7 +51,6 @@ const formatFecha = (item) => {
   return d.toLocaleDateString('es-ES');
 };
 
-// Normaliza a "documentos/..." (minúscula) y genera URL del proxy de PDF
 const buildProxyUrlDoc = (rawRuta) => {
   if (!rawRuta) return null;
   let rel = String(rawRuta).trim().replace(/\\/g, '/');
@@ -52,7 +60,6 @@ const buildProxyUrlDoc = (rawRuta) => {
   return `${FILE_PROXY}?path=${encodeURIComponent(rel)}`;
 };
 
-// Normaliza a "videos/..." (minúscula) y genera URL del proxy de VIDEO
 const buildProxyUrlVideo = (rawRuta) => {
   if (!rawRuta) return null;
   let rel = String(rawRuta).trim().replace(/\\/g, '/');
@@ -66,7 +73,7 @@ const buildProxyUrlVideo = (rawRuta) => {
 const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
-  headers: { Accept: 'application/json' },
+  headers: { Accept: 'application/json' }
 });
 api.interceptors.request.use((cfg) => {
   const t = localStorage.getItem('authToken');
@@ -75,14 +82,12 @@ api.interceptors.request.use((cfg) => {
 });
 
 /* =========================
-   Helper local de trazabilidad
+   Helper trazabilidad
    ========================= */
 async function logAccion(accion) {
   try {
     await api.post('/trazabilidad', { accion });
   } catch (e) {
-    // No rompemos el flujo si falla la traza
-    // eslint-disable-next-line no-console
     console.warn('No se pudo registrar trazabilidad:', e?.response?.data || e?.message);
   }
 }
@@ -90,53 +95,53 @@ async function logAccion(accion) {
 const Documentos = () => {
   const navigate = useNavigate();
 
-  // ====== pestaña activa ======
-  const [activeKey, setActiveKey] = useState('docs'); // 'docs' | 'videos'
+  const [activeKey, setActiveKey] = useState('docs');
 
-  // ====== Lista/paginación: Documentos ======
+  // Documentos
   const [documentos, setDocumentos] = useState([]);
   const [docCurrentPage, setDocCurrentPage] = useState(1);
   const [docLastPage, setDocLastPage] = useState(1);
 
-  // ====== Lista/paginación: Videos ======
+  // Videos
   const [videos, setVideos] = useState([]);
   const [vidCurrentPage, setVidCurrentPage] = useState(1);
   const [vidLastPage, setVidLastPage] = useState(1);
 
-  // ====== Modales ======
+  // Modales
   const [showModalUploadDoc, setShowModalUploadDoc] = useState(false);
   const [showModalUploadVid, setShowModalUploadVid] = useState(false);
 
-  // Modal Edición (compartido para doc/video)
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null); // { tipo: 'doc'|'vid', id, nombre }
   const [newName, setNewName] = useState('');
+  const [editProductCode, setEditProductCode] = useState(''); // código de producto al editar
 
-  // ✅ Instrucciones (separadas)
   const [showDocInstructionsModal, setShowDocInstructionsModal] = useState(false);
   const [showVidInstructionsModal, setShowVidInstructionsModal] = useState(false);
 
-  // Reproductor video
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoToPlay, setVideoToPlay] = useState(null); // {nombre, url}
 
-  // ====== Archivos y progreso ======
+  // Archivos y progreso
   const [selectedFilesDocs, setSelectedFilesDocs] = useState([]);
   const [selectedFilesVids, setSelectedFilesVids] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  // ====== Flags generales ======
+  // Código de producto para asociar documentos al subir
+  const [docProductCode, setDocProductCode] = useState('');
+
+  // Flags generales
   const [loading, setLoading] = useState(false);
 
-  // ====== Búsqueda ======
+  // Búsqueda
   const [searchDoc, setSearchDoc] = useState('');
   const [searchVid, setSearchVid] = useState('');
 
-  // ====== Confirmar eliminación ======
+  // Confirmar eliminación
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null); // {tipo:'doc'|'vid', id, nombre}
 
-  // ====== Modales bonitos de error/éxito ======
+  // Modales error/éxito
   const [errorModal, setErrorModal] = useState({ show: false, title: '', message: '' });
   const openErrorModal = (title, message) => setErrorModal({ show: true, title, message });
   const closeErrorModal = () => setErrorModal({ show: false, title: '', message: '' });
@@ -145,7 +150,6 @@ const Documentos = () => {
   const openSuccessModal = (title, message) => setSuccessModal({ show: true, title, message });
   const closeSuccessModal = () => setSuccessModal({ show: false, title: '', message: '' });
 
-  // Cancelación de requests
   const cancelTokenSourceRef = useRef(null);
 
   /* =========================
@@ -171,7 +175,6 @@ const Documentos = () => {
         if (!axios.isCancel(err)) {
           const msg = err?.response?.data?.message || err?.message || 'Error al cargar los documentos';
           openErrorModal('Error al cargar', msg);
-          // eslint-disable-next-line no-console
           console.error('Documentos API error:', err?.response?.data || err);
         }
       } finally {
@@ -204,7 +207,6 @@ const Documentos = () => {
         if (!axios.isCancel(err)) {
           const msg = err?.response?.data?.message || err?.message || 'Error al cargar los videos';
           openErrorModal('Error al cargar', msg);
-          // eslint-disable-next-line no-console
           console.error('Videos API error:', err?.response?.data || err);
         }
       } finally {
@@ -214,14 +216,12 @@ const Documentos = () => {
     []
   );
 
-  // Cargas iniciales y por pestaña
   useEffect(() => {
     if (activeKey === 'docs') fetchDocumentos(1, searchDoc);
     if (activeKey === 'videos') fetchVideos(1, searchVid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeKey]);
 
-  // Debounce de búsqueda (docs)
   useEffect(() => {
     const id = setTimeout(() => {
       if (activeKey === 'docs') {
@@ -232,7 +232,6 @@ const Documentos = () => {
     return () => clearTimeout(id);
   }, [searchDoc, fetchDocumentos, activeKey]);
 
-  // Debounce de búsqueda (videos)
   useEffect(() => {
     const id = setTimeout(() => {
       if (activeKey === 'videos') {
@@ -273,6 +272,12 @@ const Documentos = () => {
       const fd = new FormData();
       selectedFilesDocs.forEach((file) => fd.append('documentos[]', file));
 
+      // código de producto opcional
+      if (docProductCode.trim()) {
+        fd.append('producto_codigo', docProductCode.trim());
+        fd.append('codigo_producto', docProductCode.trim()); // por si el backend usa este nombre
+      }
+
       await api.post('/documentos/upload', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (evt) => {
@@ -283,12 +288,12 @@ const Documentos = () => {
         timeout: 120000
       });
 
-      // ✅ Trazabilidad
       const nombres = selectedFilesDocs.map(f => f.name).join(', ');
       await logAccion(`Subió documento(s): ${nombres}`);
 
       openSuccessModal('Documentos subidos', `${selectedFilesDocs.length} documento(s) subido(s) correctamente.`);
       setSelectedFilesDocs([]);
+      setDocProductCode('');
       setShowModalUploadDoc(false);
       setUploadProgress(0);
 
@@ -297,7 +302,6 @@ const Documentos = () => {
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Error al subir los documentos';
       openErrorModal('Error al subir', msg);
-      // eslint-disable-next-line no-console
       console.error('Upload docs error:', err?.response?.data || err);
     } finally {
       setLoading(false);
@@ -324,7 +328,7 @@ const Documentos = () => {
 
     try {
       const fd = new FormData();
-      selectedFilesVids.forEach((file) => fd.append('videos[]', file)); // 👈 backend debe esperar "videos[]"
+      selectedFilesVids.forEach((file) => fd.append('videos[]', file));
 
       await api.post('/videos/upload', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -336,7 +340,6 @@ const Documentos = () => {
         timeout: 180000
       });
 
-      // ✅ Trazabilidad
       const nombres = selectedFilesVids.map(f => f.name).join(', ');
       await logAccion(`Subió video(s): ${nombres}`);
 
@@ -350,7 +353,6 @@ const Documentos = () => {
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Error al subir los videos';
       openErrorModal('Error al subir', msg);
-      // eslint-disable-next-line no-console
       console.error('Upload videos error:', err?.response?.data || err);
     } finally {
       setLoading(false);
@@ -380,7 +382,6 @@ const Documentos = () => {
       if (itemToDelete.tipo === 'doc') {
         await api.delete(`/documentos/${itemToDelete.id}`);
 
-        // ✅ Trazabilidad
         await logAccion(`Eliminó documento ID ${itemToDelete.id}: ${itemToDelete.nombre}`);
 
         openSuccessModal('Documento eliminado', `"${itemToDelete.nombre}" se eliminó correctamente.`);
@@ -390,7 +391,6 @@ const Documentos = () => {
       } else {
         await api.delete(`/videos/${itemToDelete.id}`);
 
-        // ✅ Trazabilidad
         await logAccion(`Eliminó video ID ${itemToDelete.id}: ${itemToDelete.nombre}`);
 
         openSuccessModal('Video eliminado', `"${itemToDelete.nombre}" se eliminó correctamente.`);
@@ -401,7 +401,6 @@ const Documentos = () => {
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Error al eliminar';
       openErrorModal('Error al eliminar', msg);
-      // eslint-disable-next-line no-console
       console.error('Delete error:', err?.response?.data || err);
     } finally {
       setShowDeleteModal(false);
@@ -411,11 +410,20 @@ const Documentos = () => {
   };
 
   /* =========================
-     Editar nombre (doc o video)
+     Editar nombre (doc o video) + código producto
      ========================= */
   const handleEditClick = (tipo, item) => {
     setEditingItem({ tipo, id: item.id, nombre: item.nombre });
+
     setNewName(item.nombre || '');
+
+    const codigoAsociado =
+      item.producto?.codigo ||
+      item.producto_codigo ||
+      item.codigo_producto ||
+      '';
+
+    setEditProductCode(codigoAsociado);
     setShowEditModal(true);
   };
 
@@ -433,27 +441,37 @@ const Documentos = () => {
     setLoading(true);
     try {
       if (editingItem.tipo === 'doc') {
-        await api.put(`/documentos/${editingItem.id}`, { nombre: newName.trim() });
+        const codigoTrim = editProductCode.trim();
+        const payload = {
+          nombre: newName.trim(),
+          // 👇 Enviamos ambas variantes de campo para asegurar la asociación
+          producto_codigo: codigoTrim || null,
+          codigo_producto: codigoTrim || null
+        };
 
-        // ✅ Trazabilidad
-        await logAccion(`Renombró documento ID ${editingItem.id} a: "${newName.trim()}"`);
+        await api.put(`/documentos/${editingItem.id}`, payload);
 
-        openSuccessModal('Nombre actualizado', 'El documento se renombró correctamente.');
+        await logAccion(
+          `Actualizó documento ID ${editingItem.id} a nombre "${newName.trim()}"` +
+            (codigoTrim ? ` y código de producto ${codigoTrim}` : ' sin código de producto')
+        );
+
+        openSuccessModal('Documento actualizado', 'El documento se actualizó correctamente.');
         await fetchDocumentos(docCurrentPage, searchDoc);
       } else {
         await api.put(`/videos/${editingItem.id}`, { nombre: newName.trim() });
 
-        // ✅ Trazabilidad
         await logAccion(`Renombró video ID ${editingItem.id} a: "${newName.trim()}"`);
 
-        openSuccessModal('Nombre actualizado', 'El video se renombró correctamente.');
+        openSuccessModal('Video actualizado', 'El video se renombró correctamente.');
         await fetchVideos(vidCurrentPage, searchVid);
       }
       setShowEditModal(false);
+      setEditingItem(null);
+      setEditProductCode('');
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'Error al actualizar el nombre';
+      const msg = err?.response?.data?.message || err?.message || 'Error al actualizar el elemento';
       openErrorModal('Error al actualizar', msg);
-      // eslint-disable-next-line no-console
       console.error('Update error:', err?.response?.data || err);
     } finally {
       setLoading(false);
@@ -477,7 +495,7 @@ const Documentos = () => {
   };
 
   /* =========================
-     Ver documento (PDF) – siempre vía proxy
+     Ver documento
      ========================= */
   const handleOpenDoc = (doc) => {
     if (doc?.url && /^https?:\/\//i.test(doc.url)) {
@@ -490,7 +508,7 @@ const Documentos = () => {
   };
 
   /* =========================
-     Ver video – modal con <video controls>
+     Ver video
      ========================= */
   const handleOpenVideo = (vid) => {
     if (vid?.url && /^https?:\/\//i.test(vid.url)) {
@@ -504,15 +522,18 @@ const Documentos = () => {
     setShowVideoModal(true);
   };
 
+  /* =========================
+     Render
+     ========================= */
   return (
-    <div className="documentos-page">
+    <div className="clientedoc-layout">
       {/* HEADER */}
-      <Navbar expand="lg" className="documentos-header">
+      <Navbar expand="lg" className="clientedoc-header" variant="dark">
         <Container fluid>
           <Navbar.Brand className="d-flex align-items-center">
             <img src={logo} alt="Logo" width="40" height="40" className="me-2" />
             <span
-              className="documentos-title"
+              className="clientedoc-title"
               role="link"
               style={{ cursor: 'pointer' }}
               title="Ir al panel de administración"
@@ -528,10 +549,10 @@ const Documentos = () => {
       </Navbar>
 
       {/* CONTENIDO */}
-      <Container fluid className="documentos-content">
-        <Card className="documentos-card">
+      <Container fluid className="consulta-content px-3 px-md-5">
+        <Card className="consulta-card mt-4">
           <Card.Body>
-            <h2 className="documentos-title-main mb-4 text-center text-md-start">
+            <h2 className="consulta-title-main mb-4 text-center text-md-start">
               Documentos y Videos
             </h2>
 
@@ -540,75 +561,123 @@ const Documentos = () => {
               onSelect={(k) => setActiveKey(k || 'docs')}
               className="mb-3"
             >
-              {/* ============ TAB DOCUMENTOS ============ */}
+              {/* TAB DOCUMENTOS */}
               <Tab eventKey="docs" title="Documentos">
-                {/* ======= Barra superior: compacta, desde la IZQUIERDA ======= */}
-                <div className="d-flex flex-column flex-md-row align-items-center gap-2 mb-3">
-                  {/* Botones compactos */}
-                  <div className="d-flex gap-2">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      className="py-1 px-3"
-                      onClick={() => setShowModalUploadDoc(true)}
-                    >
-                      <i className="bi bi-upload me-1"></i> Cargar Documentos (PDF)
-                    </Button>
-                    <Button
-                      variant="info"
-                      size="sm"
-                      className="py-1 px-3"
-                      onClick={() => setShowDocInstructionsModal(true)}
-                    >
-                      <i className="bi bi-info-circle me-1"></i> Instrucciones
-                    </Button>
-                  </div>
-
-                  {/* Buscador compacto que inicia desde la izquierda */}
-                  <InputGroup className="flex-grow-1" style={{ maxWidth: 360 }}>
-                    <InputGroup.Text className="py-1 px-2">
-                      <i className="bi bi-search"></i>
-                    </InputGroup.Text>
+                <Form className="d-flex flex-column flex-md-row mb-4 gap-2">
+                  <InputGroup>
                     <Form.Control
                       type="text"
-                      className="py-1"
-                      placeholder="Buscar por nombre"
+                      placeholder="Buscar documento..."
                       value={searchDoc}
                       onChange={(e) => setSearchDoc(e.target.value)}
                     />
+                    {searchDoc && (
+                      <Button
+                        variant="outline-secondary"
+                        onClick={() => setSearchDoc('')}
+                      >
+                        <i className="bi bi-x-lg"></i>
+                      </Button>
+                    )}
                   </InputGroup>
+                </Form>
+
+                <div className="d-flex flex-wrap gap-2 mb-3">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setShowModalUploadDoc(true)}
+                  >
+                    <i className="bi bi-upload me-1"></i> Cargar Documentos (PDF)
+                  </Button>
+                  <Button
+                    variant="info"
+                    size="sm"
+                    onClick={() => setShowDocInstructionsModal(true)}
+                  >
+                    <i className="bi bi-info-circle me-1"></i> Instrucciones
+                  </Button>
                 </div>
 
                 {loading && (
                   <div className="text-center mb-3">Cargando documentos...</div>
                 )}
 
-                <div className="document-list">
+                <div className="product-list">
                   {documentos.length > 0 ? (
-                    documentos.map((doc) => (
-                      <div key={doc.id} className="document-card">
-                        <div className="document-info">
-                          <p><strong>{doc.nombre}</strong></p>
-                          <p>Fecha: {formatFecha(doc)}</p>
+                    documentos.map((doc) => {
+                      const prodNombre =
+                        doc.producto?.nombre ||
+                        doc.producto_nombre ||
+                        doc.nombre_producto ||
+                        '';
+                      const prodCodigo =
+                        doc.producto?.codigo ||
+                        doc.producto_codigo ||
+                        doc.codigo_producto ||
+                        '';
+
+                      return (
+                        <div className="product-card" key={doc.id}>
+                          <div className="product-info text-start">
+                            <p>
+                              <strong>Nombre:</strong> {doc.nombre}
+                            </p>
+                            <p>Fecha: {formatFecha(doc)}</p>
+
+                            {(prodNombre || prodCodigo) && (
+                              <p className="mt-1">
+                                <strong>Producto asociado:</strong>{' '}
+                                {prodNombre
+                                  ? `${prodNombre} (${prodCodigo})`
+                                  : `Código ${prodCodigo}`}
+                              </p>
+                            )}
+                          </div>
+                          <div className="card-actions">
+                            <div className="d-flex w-100 justify-content-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="warning"
+                                onClick={() => handleEditClick('doc', doc)}
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                className="btn-ver"
+                                style={{ width: 'auto' }}
+                                onClick={() => handleOpenDoc(doc)}
+                              >
+                                Ver
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="danger"
+                                onClick={() => requestDelete('doc', doc)}
+                              >
+                                Eliminar
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                        <div className="card-actions">
-                          <Button size="sm" variant="warning" onClick={() => handleEditClick('doc', doc)}>Editar</Button>
-                          <Button size="sm" variant="primary" onClick={() => handleOpenDoc(doc)}>Ver</Button>
-                          <Button size="sm" variant="danger" onClick={() => requestDelete('doc', doc)}>Eliminar</Button>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
-                    <p className="text-center">No se encontraron documentos</p>
+                    !loading && (
+                      <p className="text-center">No se encontraron documentos</p>
+                    )
                   )}
                 </div>
 
                 {docLastPage > 1 && (
-                  <div className="pagination-wrapper mt-4 d-flex justify-content-center gap-2">
+                  <div className="pagination-wrapper mt-4 d-flex justify-content-center align-items-center gap-2">
                     <button
                       className="pagination-btn"
                       onClick={() => handleDocPageChange(1)}
                       disabled={docCurrentPage === 1 || loading}
+                      aria-label="Primera página"
                       title="Primera página"
                     >
                       <i className="bi bi-skip-backward-fill"></i>
@@ -617,17 +686,23 @@ const Documentos = () => {
                       className="pagination-btn"
                       onClick={() => handleDocPageChange(docCurrentPage - 1)}
                       disabled={docCurrentPage === 1 || loading}
+                      aria-label="Página anterior"
                       title="Página anterior"
                     >
                       <i className="bi bi-chevron-left"></i>
                     </button>
                     <span className="pagination-info">
-                      {loading ? <Spinner animation="border" size="sm" /> : `${docCurrentPage} / ${docLastPage}`}
+                      {loading ? (
+                        <Spinner animation="border" size="sm" />
+                      ) : (
+                        `${docCurrentPage} / ${docLastPage}`
+                      )}
                     </span>
                     <button
                       className="pagination-btn"
                       onClick={() => handleDocPageChange(docCurrentPage + 1)}
-                      disabled={docLastPage === docCurrentPage || loading}
+                      disabled={docCurrentPage === docLastPage || loading}
+                      aria-label="Página siguiente"
                       title="Página siguiente"
                     >
                       <i className="bi bi-chevron-right"></i>
@@ -635,7 +710,8 @@ const Documentos = () => {
                     <button
                       className="pagination-btn"
                       onClick={() => handleDocPageChange(docLastPage)}
-                      disabled={docLastPage === docCurrentPage || loading}
+                      disabled={docCurrentPage === docLastPage || loading}
+                      aria-label="Última página"
                       title="Última página"
                     >
                       <i className="bi bi-skip-forward-fill"></i>
@@ -644,87 +720,101 @@ const Documentos = () => {
                 )}
               </Tab>
 
-              {/* ============ TAB VIDEOS ============ */}
+              {/* TAB VIDEOS */}
               <Tab eventKey="videos" title="Videos">
-                {/* ======= Barra superior: compacta, desde la IZQUIERDA ======= */}
-                <div className="d-flex flex-column flex-md-row align-items-center gap-2 mb-3">
-                  <div className="d-flex gap-2">
-                    <Button
-                      variant="success"
-                      size="sm"
-                      className="py-1 px-3"
-                      onClick={() => setShowModalUploadVid(true)}
-                    >
-                      <i className="bi bi-cloud-arrow-up me-1"></i> Cargar Videos (.mp4, .webm, .ogg)
-                    </Button>
-                    <Button
-                      variant="info"
-                      size="sm"
-                      className="py-1 px-3"
-                      onClick={() => setShowVidInstructionsModal(true)}
-                    >
-                      <i className="bi bi-info-circle me-1"></i> Instrucciones
-                    </Button>
-                  </div>
-
-                  <InputGroup className="flex-grow-1" style={{ maxWidth: 360 }}>
-                    <InputGroup.Text className="py-1 px-2">
-                      <i className="bi bi-search"></i>
-                    </InputGroup.Text>
+                <Form className="d-flex flex-column flex-md-row mb-4 gap-2">
+                  <InputGroup>
                     <Form.Control
                       type="text"
-                      className="py-1"
-                      placeholder="Buscar por nombre"
+                      placeholder="Buscar video..."
                       value={searchVid}
                       onChange={(e) => setSearchVid(e.target.value)}
                     />
+                    {searchVid && (
+                      <Button
+                        variant="outline-secondary"
+                        onClick={() => setSearchVid('')}
+                      >
+                        <i className="bi bi-x-lg"></i>
+                      </Button>
+                    )}
                   </InputGroup>
+                </Form>
+
+                <div className="d-flex flex-wrap gap-2 mb-3">
+                  <Button
+                    variant="success"
+                    size="sm"
+                    onClick={() => setShowModalUploadVid(true)}
+                  >
+                    <i className="bi bi-cloud-arrow-up me-1"></i> Cargar Videos (.mp4, .webm, .ogg)
+                  </Button>
+                  <Button
+                    variant="info"
+                    size="sm"
+                    onClick={() => setShowVidInstructionsModal(true)}
+                  >
+                    <i className="bi bi-info-circle me-1"></i> Instrucciones
+                  </Button>
                 </div>
 
                 {loading && (
                   <div className="text-center mb-3">Cargando videos...</div>
                 )}
 
-                <div className="document-list">
+                <div className="product-list">
                   {videos.length > 0 ? (
                     videos.map((vid) => (
-                      <div key={vid.id} className="document-card">
-                        <div className="document-info">
-                          <p><strong>{vid.nombre}</strong></p>
+                      <div className="product-card" key={vid.id}>
+                        <div className="product-info text-start">
+                          <p>
+                            <strong>Nombre:</strong> {vid.nombre}
+                          </p>
                           <p>Fecha: {formatFecha(vid)}</p>
                         </div>
                         <div className="card-actions">
-                          <Button
-                            size="sm"
-                            variant="warning"
-                            onClick={() => handleEditClick('vid', vid)}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            onClick={() => handleOpenVideo(vid)}
-                          >
-                            <i className="bi bi-play-circle me-1"></i> Ver
-                          </Button>
-                          <Button size="sm" variant="danger" onClick={() => requestDelete('vid', vid)}>
-                            Eliminar
-                          </Button>
+                          <div className="d-flex w-100 justify-content-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="warning"
+                              onClick={() => handleEditClick('vid', vid)}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              className="btn-ver"
+                              style={{ width: 'auto' }}
+                              onClick={() => handleOpenVideo(vid)}
+                            >
+                              <i className="bi bi-play-circle me-1"></i> Ver
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={() => requestDelete('vid', vid)}
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-center">No se encontraron videos</p>
+                    !loading && (
+                      <p className="text-center">No se encontraron videos</p>
+                    )
                   )}
                 </div>
 
                 {vidLastPage > 1 && (
-                  <div className="pagination-wrapper mt-4 d-flex justify-content-center gap-2">
+                  <div className="pagination-wrapper mt-4 d-flex justify-content-center align-items-center gap-2">
                     <button
                       className="pagination-btn"
                       onClick={() => handleVidPageChange(1)}
                       disabled={vidCurrentPage === 1 || loading}
+                      aria-label="Primera página"
                       title="Primera página"
                     >
                       <i className="bi bi-skip-backward-fill"></i>
@@ -733,17 +823,23 @@ const Documentos = () => {
                       className="pagination-btn"
                       onClick={() => handleVidPageChange(vidCurrentPage - 1)}
                       disabled={vidCurrentPage === 1 || loading}
+                      aria-label="Página anterior"
                       title="Página anterior"
                     >
                       <i className="bi bi-chevron-left"></i>
                     </button>
                     <span className="pagination-info">
-                      {loading ? <Spinner animation="border" size="sm" /> : `${vidCurrentPage} / ${vidLastPage}`}
+                      {loading ? (
+                        <Spinner animation="border" size="sm" />
+                      ) : (
+                        `${vidCurrentPage} / ${vidLastPage}`
+                      )}
                     </span>
                     <button
                       className="pagination-btn"
                       onClick={() => handleVidPageChange(vidCurrentPage + 1)}
-                      disabled={vidLastPage === vidCurrentPage || loading}
+                      disabled={vidCurrentPage === vidLastPage || loading}
+                      aria-label="Página siguiente"
                       title="Página siguiente"
                     >
                       <i className="bi bi-chevron-right"></i>
@@ -751,7 +847,8 @@ const Documentos = () => {
                     <button
                       className="pagination-btn"
                       onClick={() => handleVidPageChange(vidLastPage)}
-                      disabled={vidLastPage === vidCurrentPage || loading}
+                      disabled={vidCurrentPage === vidLastPage || loading}
+                      aria-label="Última página"
                       title="Última página"
                     >
                       <i className="bi bi-skip-forward-fill"></i>
@@ -770,17 +867,46 @@ const Documentos = () => {
           <Modal.Title>Cargar Documentos (PDF)</Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          {/* Código de producto */}
+          <Form.Group className="mb-3">
+            <Form.Label>Código de producto (opcional)</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Ej: 12345"
+              value={docProductCode}
+              onChange={(e) => setDocProductCode(e.target.value)}
+            />
+            <Form.Text className="text-muted">
+              Si ingresas el código, el documento quedará asociado a ese producto.
+            </Form.Text>
+          </Form.Group>
+
           <Form.Group>
             <Form.Label>Seleccionar archivos PDF</Form.Label>
-            <Form.Control type="file" multiple accept=".pdf,application/pdf" onChange={handleFileChangeDocs} />
+            <Form.Control
+              type="file"
+              multiple
+              accept=".pdf,application/pdf"
+              onChange={handleFileChangeDocs}
+            />
             {uploadProgress > 0 && (
-              <ProgressBar now={uploadProgress} label={`${uploadProgress}%`} className="mt-3" />
+              <ProgressBar
+                now={uploadProgress}
+                label={`${uploadProgress}%`}
+                className="mt-3"
+              />
             )}
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModalUploadDoc(false)}>Cancelar</Button>
-          <Button variant="primary" onClick={handleUploadDocs} disabled={loading || selectedFilesDocs.length === 0}>
+          <Button variant="secondary" onClick={() => setShowModalUploadDoc(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleUploadDocs}
+            disabled={loading || selectedFilesDocs.length === 0}
+          >
             {loading ? 'Subiendo...' : 'Subir Documentos'}
           </Button>
         </Modal.Footer>
@@ -801,7 +927,11 @@ const Documentos = () => {
               onChange={handleFileChangeVids}
             />
             {uploadProgress > 0 && (
-              <ProgressBar now={uploadProgress} label={`${uploadProgress}%`} className="mt-3" />
+              <ProgressBar
+                now={uploadProgress}
+                label={`${uploadProgress}%`}
+                className="mt-3"
+              />
             )}
             <div className="text-muted mt-2" style={{ fontSize: '0.9rem' }}>
               Tamaño máximo recomendado por archivo: 200 MB.
@@ -809,8 +939,14 @@ const Documentos = () => {
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModalUploadVid(false)}>Cancelar</Button>
-          <Button variant="success" onClick={handleUploadVids} disabled={loading || selectedFilesVids.length === 0}>
+          <Button variant="secondary" onClick={() => setShowModalUploadVid(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="success"
+            onClick={handleUploadVids}
+            disabled={loading || selectedFilesVids.length === 0}
+          >
             {loading ? 'Subiendo...' : 'Subir Videos'}
           </Button>
         </Modal.Footer>
@@ -824,7 +960,7 @@ const Documentos = () => {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form.Group>
+          <Form.Group className="mb-3">
             <Form.Label>Nuevo nombre</Form.Label>
             <Form.Control
               type="text"
@@ -832,9 +968,27 @@ const Documentos = () => {
               onChange={(e) => setNewName(e.target.value)}
             />
           </Form.Group>
+
+          {editingItem?.tipo === 'doc' && (
+            <Form.Group>
+              <Form.Label>Código de producto (opcional)</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Ej: 12345"
+                value={editProductCode}
+                onChange={(e) => setEditProductCode(e.target.value)}
+              />
+              <Form.Text className="text-muted">
+                Si ingresas el código, el documento quedará asociado a ese producto. Si lo dejas vacío,
+                se eliminará la asociación.
+              </Form.Text>
+            </Form.Group>
+          )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancelar</Button>
+          <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+            Cancelar
+          </Button>
           <Button variant="primary" onClick={handleSaveEdit} disabled={loading}>
             {loading ? 'Guardando...' : 'Guardar Cambios'}
           </Button>
@@ -849,7 +1003,8 @@ const Documentos = () => {
         <Modal.Body>
           {itemToDelete ? (
             <p>
-              ¿Estás seguro de que deseas eliminar {itemToDelete.tipo === 'doc' ? 'el documento' : 'el video'}{' '}
+              ¿Estás seguro de que deseas eliminar{' '}
+              {itemToDelete.tipo === 'doc' ? 'el documento' : 'el video'}{' '}
               <b>{itemToDelete.nombre}</b>?
             </p>
           ) : (
@@ -857,10 +1012,18 @@ const Documentos = () => {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={loading}>
+          <Button
+            variant="secondary"
+            onClick={() => setShowDeleteModal(false)}
+            disabled={loading}
+          >
             Cancelar
           </Button>
-          <Button variant="danger" onClick={handleConfirmDelete} disabled={loading}>
+          <Button
+            variant="danger"
+            onClick={handleConfirmDelete}
+            disabled={loading}
+          >
             Eliminar
           </Button>
         </Modal.Footer>
@@ -886,7 +1049,12 @@ const Documentos = () => {
       </Modal>
 
       {/* MODAL INSTRUCCIONES: DOCUMENTOS */}
-      <Modal show={showDocInstructionsModal} onHide={() => setShowDocInstructionsModal(false)} centered size="lg">
+      <Modal
+        show={showDocInstructionsModal}
+        onHide={() => setShowDocInstructionsModal(false)}
+        centered
+        size="lg"
+      >
         <Modal.Header closeButton>
           <Modal.Title>Instrucciones para Documentos (PDF)</Modal.Title>
         </Modal.Header>
@@ -895,17 +1063,27 @@ const Documentos = () => {
             <Card.Body>
               <h5 className="mb-3 text-primary">Recomendaciones</h5>
               <ul>
-                <li>El archivo debe estar en formato <strong>PDF</strong>.</li>
+                <li>
+                  El archivo debe estar en formato <strong>PDF</strong>.
+                </li>
                 <li>Nombre de los archivos en mayúscula sostenida</li>
                 <li>Nomenclatura de archivos:</li>
                 <li>- Ficha técnica: FT Nombre lab nombre producto</li>
                 <li>- Registro Sanitario: RS Nombre lab nombre producto</li>
-                <li>Si quieres que el documento aparezca en <strong>Capacitación</strong>, incluye la palabra <code>capacitacion</code> en el nombre del archivo.</li>
-                <li>Si quieres que el documento aparezca en <strong>Vademécum</strong>, incluye la palabra <code>vademecum</code> en el nombre del archivo.</li>
+                <li>
+                  Si quieres que el documento aparezca en <strong>Capacitación</strong>, incluye la
+                  palabra <code>capacitacion</code> en el nombre del archivo.
+                </li>
+                <li>
+                  Si quieres que el documento aparezca en <strong>Vademécum</strong>, incluye la
+                  palabra <code>vademecum</code> en el nombre del archivo.
+                </li>
                 <li>Puedes seleccionar varios archivos a la vez.</li>
                 <li>No se aceptarán nombres duplicados ya cargados.</li>
               </ul>
-              <p className="text-muted mb-0 mt-2">Si tienes dudas, contacta con el administrador del sistema.</p>
+              <p className="text-muted mb-0 mt-2">
+                Si tienes dudas, contacta con el administrador del sistema.
+              </p>
             </Card.Body>
           </Card>
         </Modal.Body>
@@ -917,7 +1095,12 @@ const Documentos = () => {
       </Modal>
 
       {/* MODAL INSTRUCCIONES: VIDEOS */}
-      <Modal show={showVidInstructionsModal} onHide={() => setShowVidInstructionsModal(false)} centered size="lg">
+      <Modal
+        show={showVidInstructionsModal}
+        onHide={() => setShowVidInstructionsModal(false)}
+        centered
+        size="lg"
+      >
         <Modal.Header closeButton>
           <Modal.Title>Instrucciones para Videos</Modal.Title>
         </Modal.Header>
@@ -926,11 +1109,18 @@ const Documentos = () => {
             <Card.Body>
               <h5 className="mb-3 text-success">Recomendaciones</h5>
               <ul>
-                <li>Formatos permitidos: <strong>MP4</strong>, <strong>WEBM</strong>, <strong>OGG</strong>.</li>
-                <li>Tamaño recomendado por archivo: hasta <strong>~200 MB</strong>.</li>
+                <li>
+                  Formatos permitidos: <strong>MP4</strong>, <strong>WEBM</strong>,{' '}
+                  <strong>OGG</strong>.
+                </li>
+                <li>
+                  Tamaño recomendado por archivo: hasta <strong>~200 MB</strong>.
+                </li>
                 <li>Evita nombres con espacios dobles o caracteres extraños.</li>
               </ul>
-              <p className="text-muted mb-0 mt-2">Si tienes dudas, contacta con el administrador del sistema.</p>
+              <p className="text-muted mb-0 mt-2">
+                Si tienes dudas, contacta con el administrador del sistema.
+              </p>
             </Card.Body>
           </Card>
         </Modal.Body>
@@ -941,9 +1131,12 @@ const Documentos = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* MODAL ERROR BONITO */}
+      {/* MODAL ERROR */}
       <Modal show={errorModal.show} onHide={closeErrorModal} centered>
-        <Modal.Header closeButton style={{ backgroundColor: '#dc3545', color: '#fff' }}>
+        <Modal.Header
+          closeButton
+          style={{ backgroundColor: '#dc3545', color: '#fff' }}
+        >
           <Modal.Title>{errorModal.title || 'Atención'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -958,9 +1151,12 @@ const Documentos = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* MODAL ÉXITO BONITO */}
+      {/* MODAL ÉXITO */}
       <Modal show={successModal.show} onHide={closeSuccessModal} centered>
-        <Modal.Header closeButton style={{ backgroundColor: '#198754', color: '#fff' }}>
+        <Modal.Header
+          closeButton
+          style={{ backgroundColor: '#198754', color: '#fff' }}
+        >
           <Modal.Title>{successModal.title || 'Operación exitosa'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -976,7 +1172,7 @@ const Documentos = () => {
       </Modal>
 
       {/* FOOTER */}
-      <footer className="documentos-footer text-center py-3">
+      <footer className="clientedoc-footer text-center py-3">
         © 2025 La Farmacia Homeopática - Más alternativas, más servicio.
       </footer>
     </div>

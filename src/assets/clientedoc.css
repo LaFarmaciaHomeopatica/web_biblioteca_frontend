@@ -50,20 +50,26 @@ body {
     }
 }
 
-/* Footer */
+
 .clientedoc-footer {
     background: #333 !important;
-    padding: 0.5rem 0 !important;
     color: white !important;
+
+    /* 👉 mismo “truco” que el header */
     width: 100vw;
     position: relative;
     left: 50%;
     right: 50%;
     margin-left: -50vw;
     margin-right: -50vw;
+
+    /* 👉 altura amplia como el footer ancho correcto */
+    padding: 1.5rem 0 !important;
+    text-align: center;
+    font-size: 1.0rem;
 }
 
-/* ✅ GRID PARA DOCUMENTOS */
+/* GRID PARA DOCUMENTOS */
 .document-list {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -71,7 +77,7 @@ body {
     margin-top: 20px;
 }
 
-/* ✅ CARD */
+/* CARD */
 .document-card {
     background: #fff;
     border-radius: 10px;
@@ -91,7 +97,7 @@ body {
     font-weight: 500;
 }
 
-/* ✅ Botón Ver */
+/* Botón Ver */
 .card-actions {
     margin-top: auto;
     display: flex;
@@ -112,7 +118,7 @@ body {
     background: #82bcff !important;
 }
 
-/* ✅ Responsive: 2 columnas en tablets, 1 en móvil */
+/* Responsive */
 @media (max-width: 992px) {
     .document-list {
         grid-template-columns: repeat(2, 1fr);
@@ -125,7 +131,7 @@ body {
     }
 }
 
-/* ✅ Paginación */
+/* Paginación */
 .pagination-wrapper {
     display: flex;
     gap: 15px;
