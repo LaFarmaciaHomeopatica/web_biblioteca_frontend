@@ -28,7 +28,7 @@ const Admin = () => {
   const handleModuloMedico = () => navigate("/modulomedico");
   const handleBack = () => navigate(0); // recargar panel
 
-  // ====== Reloj y fecha en vivo ======
+  // ====== Reloj y fecha en tiempo real ======
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -212,7 +212,7 @@ const Admin = () => {
               </Card>
             </Col>
 
-            {/* ✅ Registros Sanitarios (antes "Vencimiento") */}
+            {/* Registros Sanitarios*/}
             <Col xs={12} md={6} lg={3}>
               <Card className="border-0 h-100" style={cardStyle}>
                 <Card.Body className="d-flex flex-column">

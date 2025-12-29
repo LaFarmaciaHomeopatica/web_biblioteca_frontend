@@ -27,7 +27,7 @@ const ProductoPorLaboratorio = () => {
   const navigate = useNavigate();
   const { laboratorioNombre } = useParams();
 
-  // ✅ Formatear precios
+  // Formatear precios
   const formatearPrecio = (valor) => {
     if (valor == null || valor === '') return '';
     return parseFloat(valor).toLocaleString('es-CO', {
@@ -36,7 +36,7 @@ const ProductoPorLaboratorio = () => {
     });
   };
 
-  // ✅ Formatear IVA igual que en Cliente: 0.19 -> 19%
+  // Formatear IVA igual que en Cliente: 0.19 -> 19%
   const formatearIVA = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '';
 
@@ -86,23 +86,23 @@ const ProductoPorLaboratorio = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
 
-  // 📄 Estado para documentos asociados
+  // Estado para documentos asociados
   const [productoDocumentos, setProductoDocumentos] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [docsError, setDocsError] = useState(null);
 
-  // ✅ Productos asociados (reemplazo)
+  // Productos asociados (reemplazo)
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [relatedError, setRelatedError] = useState(null);
   const productosAllCacheRef = useRef(null);
 
-  // ✅ Evitar bucles/race conditions en paginación (ignorando respuestas viejas)
+  // Evitar bucles/race conditions en paginación (ignorando respuestas viejas)
   const reqIdRef = useRef(0);
 
   const handleBack = () => navigate('/laboratorios');
 
-  // ✅ Fetch productos
+  // Fetch productos
   const fetchProductos = useCallback(
     async (page = 1) => {
       if (!laboratorioNombre) return;
@@ -120,7 +120,7 @@ const ProductoPorLaboratorio = () => {
         }
         const response = await axios.get(url);
 
-        // ✅ Si llegó una respuesta vieja, la ignoramos
+        // Si llegó una respuesta vieja, la ignoramos
         if (reqId !== reqIdRef.current) return;
 
         setProductos(response.data?.data || []);
@@ -151,7 +151,7 @@ const ProductoPorLaboratorio = () => {
     setCurrentPage(1);
   };
 
-  // ✅ Fetch documentos asociados a un producto
+  // Fetch documentos asociados a un producto
   const fetchDocumentosProducto = useCallback(async (productoId) => {
     if (!productoId) return;
     setDocsLoading(true);
@@ -193,7 +193,7 @@ const ProductoPorLaboratorio = () => {
     }
   }, []);
 
-  // ✅ Fetch productos asociados (reemplazo)
+  // Fetch productos asociados (reemplazo)
   const fetchProductosAsociados = useCallback(async (producto) => {
     setRelatedProducts([]);
     setRelatedError(null);
@@ -253,7 +253,7 @@ const ProductoPorLaboratorio = () => {
     fetchProductosAsociados(p);
   };
 
-  // ✅ Controladores de paginación (sin llamar fetch aquí para evitar doble-request + bucles)
+  // Controladores de paginación (sin llamar fetch aquí para evitar doble-request + bucles)
   const handlePageChange = (newPage) => {
     if (!loading && newPage >= 1 && newPage <= lastPage) {
       setCurrentPage(newPage);
@@ -273,7 +273,7 @@ const ProductoPorLaboratorio = () => {
     setRelatedLoading(false);
   };
 
-  // ✅ Texto “Mostrando X - Y ...” (solo visual)
+  // Texto “Mostrando X - Y ...” (solo visual)
   const showing = useMemo(() => {
     const start = productos.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
     const end = (currentPage - 1) * PAGE_SIZE + (productos?.length || 0);
@@ -344,7 +344,7 @@ const ProductoPorLaboratorio = () => {
             {/* PANEL SUPERIOR estilo Consulta/RS */}
             <div className="rs-filters-panel mb-3">
               <Row className="g-2 align-items-end">
-                {/* ✅ Búsqueda a la izquierda */}
+                {/* Búsqueda a la izquierda */}
                 <Col xs={12} lg>
                   <Row className="g-2 align-items-end">
                     <Col xs={12}>
@@ -361,7 +361,7 @@ const ProductoPorLaboratorio = () => {
                   </Row>
                 </Col>
 
-                {/* ✅ Botón volver a la derecha (como al inicio) */}
+                {/* Botón volver a la derecha (como al inicio) */}
                 <Col xs={12} lg="auto" className="ms-lg-auto d-flex justify-content-end">
                   <div className="d-flex flex-wrap gap-2">
                     <Button onClick={handleBack} variant="secondary">
@@ -397,7 +397,7 @@ const ProductoPorLaboratorio = () => {
                     >
                       <div className={`rs-card w-100 ${inactive ? 'rs-card--inactive' : ''}`}>
                         <div className="rs-card-body">
-                          {/* ✅ Nombre estilo RS (sin negrilla) */}
+                          {/* Nombre estilo RS */}
                           <div className="rs-name text-break">
                             {producto.nombre || '-'}
                           </div>
@@ -646,7 +646,7 @@ const ProductoPorLaboratorio = () => {
 
                           <hr className="my-3" />
 
-                          {/* ✅ Productos asociados */}
+                          {/* Productos asociados */}
                           <div>
                             <div className="d-flex align-items-center mb-2">
                               <i className="bi bi-boxes me-2"></i>

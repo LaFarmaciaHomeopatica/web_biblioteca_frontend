@@ -12,7 +12,7 @@ import api from '../api/api';
 
 const PAGE_SIZE = 20;
 
-// Proxy para ver PDFs (el mismo que tienes en api.php)
+// Proxy para ver PDFs (el mismo que esta en api.php)
 const FILE_PROXY = `${window.location.origin}/backend/api/documentos/stream`;
 
 const Consulta = () => {
@@ -98,7 +98,7 @@ const Consulta = () => {
   const [loadingRelatedProducts, setLoadingRelatedProducts] = useState(false);
   const [errorRelatedProducts, setErrorRelatedProducts] = useState(null);
 
-  // Cache de productos-all para paginación fluida en cliente (sin llamadas al cambiar de página)
+  // Cache de productos-all para paginación fluida en cliente
   const productosAllCacheRef = useRef(null);
 
   const [viewingRelatedProduct, setViewingRelatedProduct] = useState(null);
@@ -112,7 +112,7 @@ const Consulta = () => {
   const [loadingRelatedProducts2, setLoadingRelatedProducts2] = useState(false);
   const [errorRelatedProducts2, setErrorRelatedProducts2] = useState(null);
 
-  // ===== Modales de error/éxito (memoizados para evitar renders que rompan useCallback/useEffect) =====
+  // ===== Modales de error/éxito
   const [errorModal, setErrorModal] = useState({ show: false, title: '', message: '' });
   const openErrorModal = useCallback((modalTitle, message) => {
     setErrorModal({ show: true, title: modalTitle, message });
@@ -158,7 +158,6 @@ const Consulta = () => {
 
   const selectedCount = selectedIds.size;
 
-  // Para construir el payload COMPLETO y evitar 422 (PUT requiere campos completos en muchos backends)
   const buildProductoUpdatePayload = useCallback((p, override = {}) => {
     const payload = {
       codigo: p?.codigo ?? '',
@@ -200,7 +199,7 @@ const Consulta = () => {
     setLastPage(lp);
   }, []);
 
-  // ===== Cargar productos (SIEMPRE paginación en cliente para que sea fluida) =====
+  // ===== Cargar productos =====
   const fetchProductos = useCallback(async (page = 1) => {
     setError(null);
 
@@ -244,7 +243,6 @@ const Consulta = () => {
     };
 
     try {
-      // Si ya tenemos cache, paginar/filtrar sin red (fluido)
       if (productosAllCacheRef.current) {
         applyFiltersAndPaginate(productosAllCacheRef.current);
         return;
@@ -274,7 +272,6 @@ const Consulta = () => {
     }
   }, [filterBy, searchTerm, navigate, openErrorModal, paginarCliente]);
 
-  // ✅ Ahora sí: incluye fetchProductos en dependencias (corrige warning eslint)
   const updateEstadoRegistroBulk = useCallback(async (nuevoEstado) => {
     const nuevo = String(nuevoEstado ?? '').trim();
     if (!nuevo) {
@@ -282,7 +279,6 @@ const Consulta = () => {
       return;
     }
 
-    // Asegurar que tenemos el catálogo completo para encontrar los productos por id
     try {
       if (!productosAllCacheRef.current) {
         const resp = await api.get('/productos-all');
@@ -885,7 +881,7 @@ const Consulta = () => {
         `• Actualizados: ${response.data.actualizados || 0}`,
         `• Eliminados: ${response.data.eliminados || 0}`
       ].join('\n');
-      openSuccessModal('✅ Importación completada', msg);
+      openSuccessModal(' Importación completada', msg);
 
       await logAction('Confirmó importación de productos desde Excel');
 
@@ -1039,7 +1035,7 @@ const Consulta = () => {
                   const inactive = producto.estado_producto?.toLowerCase() === 'inactivo';
                   const isSelected = selectedIds.has(producto?.id);
 
-                  // ✅ Si el filtro activo es "inactivo", borde rojo para TODAS las cards mostradas
+                  // Si el filtro activo es "inactivo", borde rojo para TODAS las cards mostradas
                   const isInactivoFilter = filterBy === 'inactivo';
 
                   return (
@@ -1059,7 +1055,7 @@ const Consulta = () => {
                             ? { border: '2px solid #dc3545' }
                             : null),
 
-                          // Mantener el resaltado azul de selección (tu outline actual)
+                          // Mantener el resaltado azul de selección
                           ...(isSelected
                             ? { outline: '3px solid #0d6efd', outlineOffset: '2px' }
                             : null),
@@ -1067,7 +1063,7 @@ const Consulta = () => {
                           position: 'relative'
                         }}
                       >
-                        {/* Checkbox selección (sin texto) */}
+                        {/* Checkbox selección */}
                         <div
                           style={{
                             position: 'absolute',
@@ -1216,7 +1212,7 @@ const Consulta = () => {
         </Card>
       </Container>
 
-      {/* Modal editar SOLO Estado Registro (bulk) */}
+      {/* Modal editar SOLO Estado Registro */}
       <Modal
         show={showBulkEstadoModal}
         onHide={() => !loading && setShowBulkEstadoModal(false)}
@@ -1268,7 +1264,7 @@ const Consulta = () => {
       </Modal>
 
       {/* =======================
-          MODALES (sin cambios)
+          MODALES
          ======================= */}
 
       {/* Modal VER (Producto inicial) */}

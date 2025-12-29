@@ -27,7 +27,7 @@ const Login = () => {
     }
   };
 
-  // Mensajes de error lindos y específicos
+  // Mensajes de error
   const prettyError = (err) => {
     // Sin respuesta (timeout/offline/etc)
     if (!err?.response) return 'No hay conexión con el servidor. Intenta nuevamente.';
@@ -36,13 +36,11 @@ const Login = () => {
     const rawMsg = String(err.response?.data?.message || '').toLowerCase();
     const errors = err.response?.data?.errors;
 
-    // 422: validaciones de backend (ej. Laravel)
     if (status === 422 && errors) {
       if (errors.email?.length) return errors.email[0];
       if (errors.password?.length) return errors.password[0];
     }
 
-    // 401: credenciales incorrectas
     if (status === 401) {
       if (rawMsg.includes('password') || rawMsg.includes('contrase')) {
         return 'Clave incorrecta.';
@@ -53,12 +51,10 @@ const Login = () => {
       return 'Correo o clave incorrectos.';
     }
 
-    // 404: endpoint no encontrado
     if (status === 404) {
       return 'El endpoint de login no se encontró. Revisa tu .env o la URL del backend.';
     }
 
-    // 5xx o cualquier otro
     if (!rawMsg || rawMsg === 'server error') {
       return 'No pudimos iniciar sesión. Intenta nuevamente.';
     }
@@ -81,7 +77,6 @@ const Login = () => {
       setTimeout(() => redirigirPorRol(user.rol), 800);
     } catch (err) {
       setError(prettyError(err));
-      // eslint-disable-next-line no-console
       console.error('Error en el login:', err?.response?.data || err);
       setLoading(false);
     }
@@ -131,7 +126,7 @@ const Login = () => {
         <div className="login-form">
           <h2 className="login-title">Iniciar Sesión</h2>
 
-          {/* (dejamos el mensaje simple oculto por CSS) */}
+          {/* (el mensaje simple oculto por CSS) */}
           {error && <div className="error-message">{error}</div>}
 
           <form onSubmit={handleSubmit}>
@@ -161,7 +156,7 @@ const Login = () => {
                 className="pwd-toggle"
                 onClick={() => setShowPwd((v) => !v)}
               >
-                {/* ojito SVG inline para no depender de librerías */}
+                
                 {showPwd ? (
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                     <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>

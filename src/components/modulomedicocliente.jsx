@@ -52,7 +52,7 @@ const ModuloMedicoCliente = () => {
   const [fetchError, setFetchError] = useState("");
 
   // =========================
-  // ✅ BUSCADOR / FILTRO
+  // BUSCADOR / FILTRO
   // =========================
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -71,13 +71,14 @@ const ModuloMedicoCliente = () => {
         includes(row.identificacion) ||
         includes(row.nombre) ||
         includes(row.visitador) ||
-        includes(row.observaciones)
+        includes(row.observaciones) ||
+        includes(row.cartera)
       );
     });
   }, [data, normalizedSearch]);
 
   // =========================
-  // ✅ PAGINACIÓN (FRONT) 100 por página
+  // PAGINACIÓN (FRONT) 100 por página
   // =========================
   const [page, setPage] = useState(1);
 
@@ -127,7 +128,8 @@ const ModuloMedicoCliente = () => {
   // Scroll
   // =========================
   const goTop = () => topRef.current?.scrollIntoView({ behavior: "smooth" });
-  const goBottom = () => bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  const goBottom = () =>
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
 
   // =========================
   // Controles de paginación
@@ -141,7 +143,7 @@ const ModuloMedicoCliente = () => {
     <div className="consulta-layout">
       <div ref={topRef} />
 
-      {/* ✅ HEADER (IGUAL QUE cliente.jsx) */}
+      {/* HEADER (IGUAL QUE cliente.jsx) */}
       <Navbar expand="lg" className="consulta-header" variant="dark">
         <Container fluid>
           <Navbar.Brand className="d-flex align-items-center">
@@ -228,13 +230,13 @@ const ModuloMedicoCliente = () => {
             </div>
           </div>
 
-          {/* ✅ BUSCADOR */}
+          {/* BUSCADOR */}
           <div className="mb-3">
             <Form.Control
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por identificación, nombre, visitador u observaciones..."
+              placeholder="Buscar por identificación, nombre, visitador, observaciones o cartera..."
               disabled={loading}
             />
             <div className="mt-1" style={{ fontSize: "0.85rem", opacity: 0.9 }}>
@@ -252,7 +254,9 @@ const ModuloMedicoCliente = () => {
           </div>
 
           {loading && <p className="text-center mb-2">Cargando registros...</p>}
-          {fetchError && <p className="text-center text-danger mb-2">{fetchError}</p>}
+          {fetchError && (
+            <p className="text-center text-danger mb-2">{fetchError}</p>
+          )}
 
           {/* TABLA (SOLO LECTURA) */}
           <div style={{ width: "100%", overflowX: "auto" }}>
@@ -274,6 +278,7 @@ const ModuloMedicoCliente = () => {
                   <th>Tarifa</th>
                   <th>Observaciones</th>
                   <th>Visitador</th>
+                  <th>Cartera</th>
                 </tr>
               </thead>
 
@@ -286,12 +291,13 @@ const ModuloMedicoCliente = () => {
                       <td>{mostrarPorcentaje(row.tarifa)}</td>
                       <td>{row.observaciones}</td>
                       <td>{row.visitador}</td>
+                      <td>{row.cartera}</td>
                     </tr>
                   ))
                 ) : (
                   !loading && (
                     <tr>
-                      <td colSpan="5" className="text-center">
+                      <td colSpan="6" className="text-center">
                         No hay datos cargados.
                       </td>
                     </tr>
@@ -301,7 +307,7 @@ const ModuloMedicoCliente = () => {
             </Table>
           </div>
 
-          {/* ✅ Paginación */}
+          {/* Paginación */}
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mt-3 gap-2">
             <div style={{ fontSize: "0.95rem" }}>
               Mostrando{" "}
@@ -358,7 +364,7 @@ const ModuloMedicoCliente = () => {
                 ⏭
               </Button>
 
-              {/* ✅ ARRIBA al final junto a paginación */}
+              {/* ARRIBA al final junto a paginación */}
               <Button variant="secondary" onClick={goTop} title="Ir al inicio">
                 ⬆ Arriba
               </Button>

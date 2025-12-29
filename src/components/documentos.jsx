@@ -444,7 +444,6 @@ const Documentos = () => {
         const codigoTrim = editProductCode.trim();
         const payload = {
           nombre: newName.trim(),
-          // 👇 Enviamos ambas variantes de campo para asegurar la asociación
           producto_codigo: codigoTrim || null,
           codigo_producto: codigoTrim || null
         };

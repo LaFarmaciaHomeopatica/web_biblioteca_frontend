@@ -8,10 +8,10 @@ import React, {
 } from "react";
 import { Navbar, Button, Table, Modal, Form, Dropdown } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "../assets/consulta.css"; // mismo CSS que usa Consulta
+import "../assets/consulta.css";
 import logo from "../assets/logo.jpeg";
 import { useNavigate } from "react-router-dom";
-import api from "../api/api"; // cliente Axios ya configurado (igual que en Consulta)
+import api from "../api/api";
 
 const PAGE_SIZE = 100;
 
@@ -24,7 +24,7 @@ const ModuloMedico = () => {
   const handleVolver = () => navigate("/admin");
 
   // =========================
-  // ✅ TRAZABILIDAD (NO rompe el flujo si falla)
+  // TRAZABILIDAD
   // =========================
   const registrarTrazabilidad = async (accion, descripcion) => {
     try {
@@ -59,7 +59,7 @@ const ModuloMedico = () => {
   const [fetchError, setFetchError] = useState("");
 
   // =========================
-  // ✅ MODALES DE ACCIONES (como Consulta.jsx)
+  // MODALES DE ACCIONES
   // =========================
   const [showActionModal, setShowActionModal] = useState(false);
   const [actionModalTitle, setActionModalTitle] = useState("");
@@ -109,7 +109,7 @@ const ModuloMedico = () => {
   };
 
   // =========================
-  // ✅ COLUMNAS VISIBLES (selector arriba a la derecha)
+  // COLUMNAS VISIBLES
   // =========================
   const COLUMN_KEYS = {
     identificacion: "Identificación",
@@ -118,7 +118,6 @@ const ModuloMedico = () => {
     observaciones: "Observaciones",
     visitador: "Visitador",
     cartera: "Cartera",
-  
   };
 
   const [visibleCols, setVisibleCols] = useState(() => ({
@@ -141,7 +140,7 @@ const ModuloMedico = () => {
   }, [visibleCols]);
 
   // =========================
-  // ✅ BUSCADOR / FILTRO
+  // BUSCADOR / FILTRO
   // =========================
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -223,7 +222,7 @@ const ModuloMedico = () => {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  // ✅ Estilo reutilizable para textarea "Observaciones"
+  // Estilo reutilizable para textarea "Observaciones"
   const observacionesTextareaStyle = {
     resize: "vertical",
     overflowY: "auto",
@@ -344,7 +343,7 @@ const ModuloMedico = () => {
       tarifa: Number(tarifaLimpia),
       observaciones: newRecord.observaciones.trim() || null,
       visitador: newRecord.visitador.trim() || null,
-      cartera: newRecord.cartera || null, // acepta cualquier texto/caracter
+      cartera: newRecord.cartera || null,
     };
 
     try {
@@ -510,7 +509,10 @@ const ModuloMedico = () => {
         );
       } catch (error) {
         console.error("Error al eliminar médico:", error);
-        openActionModal("Error", "No se pudo eliminar el registro. Revisa el servidor.");
+        openActionModal(
+          "Error",
+          "No se pudo eliminar el registro. Revisa el servidor."
+        );
       } finally {
         setLoading(false);
       }
@@ -583,15 +585,19 @@ const ModuloMedico = () => {
       const formData = new FormData();
       formData.append("file", file);
 
-      await api.post("/medicos/import-excel", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      // ✅ NO forzar Content-Type: axios lo pone bien con el boundary.
+      const res = await api.post("/medicos/import-excel", formData, {
+        timeout: 180000,
+        withCredentials: true,
       });
 
       await fetchMedicos();
 
       openActionModal(
         "Importación lista",
-        `El archivo "${file.name}" se importó correctamente.`
+        res?.data?.message
+          ? `${res.data.message}\nImportados: ${res.data.importados ?? ""}  Saltados: ${res.data.saltados ?? ""}`
+          : `El archivo "${file.name}" se importó correctamente.`
       );
 
       await registrarTrazabilidad(
@@ -600,10 +606,32 @@ const ModuloMedico = () => {
       );
     } catch (error) {
       console.error("Error al importar Excel:", error);
-      openActionModal(
-        "Error",
-        "No se pudo importar el archivo. Verifica el formato y el servidor."
-      );
+
+      const status = error?.response?.status;
+      const dataResp = error?.response?.data;
+
+      let msg = "No se pudo importar el archivo. Verifica el formato.";
+
+      if (status === 422) {
+        msg = dataResp?.message || "Error de validación (422).";
+
+        if (dataResp?.errors) {
+          const detalles = Object.values(dataResp.errors).flat().join(" ");
+          msg += `\n${detalles}`;
+        }
+
+        if (dataResp?.duplicados?.length) {
+          msg += `\nDuplicados: ${dataResp.duplicados.join(", ")}`;
+        }
+
+        if (typeof dataResp?.saltados !== "undefined") {
+          msg += `\nSaltados: ${dataResp.saltados}`;
+        }
+      } else if (dataResp?.error) {
+        msg = dataResp.error;
+      }
+
+      openActionModal("Error", msg);
     } finally {
       setImporting(false);
     }
@@ -638,7 +666,10 @@ const ModuloMedico = () => {
         'El archivo "medicos.xlsx" se generó correctamente.'
       );
 
-      await registrarTrazabilidad("EXPORTAR_EXCEL", "Se exportó Excel del Módulo Médico.");
+      await registrarTrazabilidad(
+        "EXPORTAR_EXCEL",
+        "Se exportó Excel del Módulo Médico."
+      );
     } catch (error) {
       console.error("Error al exportar Excel:", error);
       openActionModal("Error", "No se pudo exportar. Revisa el servidor.");
@@ -707,7 +738,7 @@ const ModuloMedico = () => {
             <h2 className="consulta-title-main mb-3 mb-md-0">Módulo Médico</h2>
 
             <div className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
-              {/* ✅ Selector de columnas (arriba a la derecha) */}
+              {/* Selector de columnas */}
               <Dropdown align="end">
                 <Dropdown.Toggle
                   variant="info"
@@ -733,8 +764,8 @@ const ModuloMedico = () => {
                       label={label}
                       checked={!!visibleCols[key]}
                       onChange={() => {
-                        // evita que se queden todas ocultas
-                        const currentlyOn = Object.values(visibleCols).filter(Boolean).length;
+                        const currentlyOn =
+                          Object.values(visibleCols).filter(Boolean).length;
                         if (visibleCols[key] && currentlyOn === 1) return;
                         toggleColumn(key);
                       }}
@@ -903,7 +934,11 @@ const ModuloMedico = () => {
                               type="checkbox"
                               checked={selectedIds.has(row.id)}
                               onChange={() => toggleSelectOne(row.id)}
-                              title={selectedIds.has(row.id) ? "Desmarcar" : "Marcar para eliminar"}
+                              title={
+                                selectedIds.has(row.id)
+                                  ? "Desmarcar"
+                                  : "Marcar para eliminar"
+                              }
                             />
                           ) : (
                             "-"
@@ -949,9 +984,7 @@ const ModuloMedico = () => {
                   !loading && (
                     <tr>
                       <td
-                        colSpan={
-                          Object.values(visibleCols).filter(Boolean).length || 1
-                        }
+                        colSpan={Object.values(visibleCols).filter(Boolean).length || 1}
                         className="text-center"
                       >
                         No hay datos cargados.
@@ -1035,13 +1068,8 @@ const ModuloMedico = () => {
         © 2025 La Farmacia Homeopática - Más alternativas, más servicio.
       </footer>
 
-      {/* ✅ MODAL CONFIRMAR */}
-      <Modal
-        show={showConfirmModal}
-        onHide={closeConfirmModal}
-        centered
-        backdrop="static"
-      >
+      {/* MODAL CONFIRMAR */}
+      <Modal show={showConfirmModal} onHide={closeConfirmModal} centered backdrop="static">
         <Modal.Header closeButton>
           <Modal.Title>{confirmTitle}</Modal.Title>
         </Modal.Header>
@@ -1056,12 +1084,12 @@ const ModuloMedico = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* ✅ MODAL ACCIÓN OK/ERROR */}
+      {/* MODAL ACCIÓN OK/ERROR */}
       <Modal show={showActionModal} onHide={closeActionModal} centered>
         <Modal.Header closeButton>
           <Modal.Title>{actionModalTitle}</Modal.Title>
         </Modal.Header>
-        <Modal.Body>{actionModalMessage}</Modal.Body>
+        <Modal.Body style={{ whiteSpace: "pre-wrap" }}>{actionModalMessage}</Modal.Body>
         <Modal.Footer>
           <Button variant="info" onClick={closeActionModal}>
             Perfecto

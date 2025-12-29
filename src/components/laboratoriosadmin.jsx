@@ -140,7 +140,6 @@ const Laboratoriosadmin = () => {
         meta
       });
     } catch {
-      // silencioso
     }
   }, []);
 
@@ -417,7 +416,6 @@ const Laboratoriosadmin = () => {
         {/* LISTADO DE CARDS */}
         {filtered.length > 0 && (
           onlyOne ? (
-            // Caso 1 laboratorio: card centrada y grande
             <Row className="g-4 justify-content-center">
               <Col xs="auto">
                 <LabCard

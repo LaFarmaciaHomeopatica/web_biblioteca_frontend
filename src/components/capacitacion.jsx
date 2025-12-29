@@ -10,8 +10,8 @@ import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
 import { useAuth } from '../context/AuthContext';
 
-const API_BASE = `${window.location.origin}/backend/api`; // ✅ backend publicado
-const FILE_PROXY = `${API_BASE}/documentos/stream`;        // ✅ proxy para PDFs
+const API_BASE = `${window.location.origin}/backend/api`;
+const FILE_PROXY = `${API_BASE}/documentos/stream`;      
 
 // Normaliza texto para búsqueda (sin tildes, minúsculas)
 const norm = (s) =>
@@ -44,13 +44,13 @@ const Capacitacion = () => {
   const navigate = useNavigate();
   const { token, logout } = useAuth();
 
-  const [documentos, setDocumentos] = useState([]);   // docs de la página (servidor)
+  const [documentos, setDocumentos] = useState([]);   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
 
-  // 🔎 barra de búsqueda (filtra por nombre en el cliente)
+  // barra de búsqueda (filtra por nombre en el cliente)
   const [searchTerm, setSearchTerm] = useState('');
 
   // Carga inicial
@@ -83,7 +83,6 @@ const Capacitacion = () => {
       setCurrentPage(Number(data?.current_page) || page);
       setLastPage(Number(data?.last_page) || 1);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Error al cargar documentos:', err?.response?.data || err);
       setError(err?.response?.data?.message || 'Error al cargar los documentos');
     } finally {
@@ -119,7 +118,7 @@ const Capacitacion = () => {
     navigate('/');
   };
 
-  // ✅ MISMA API DE PAGINACIÓN QUE EN documentos.jsx
+  // MISMA API DE PAGINACIÓN QUE EN documentos.jsx
   const handlePageChange = (newPage) => {
     if (!loading && newPage >= 1 && newPage <= lastPage) {
       setCurrentPage(newPage);
@@ -188,7 +187,7 @@ const Capacitacion = () => {
                   Documentos - Capacitación
                 </h2>
 
-                {/* 🔎 Barra de búsqueda (ancho completo) */}
+                {/* Barra de búsqueda (ancho completo) */}
                 <Row className="g-3 align-items-end mb-3">
                   <Col xs={12} md={12} lg={12}>
                     <Form.Label className="fw-semibold">Buscar dentro de Capacitación:</Form.Label>
@@ -245,7 +244,7 @@ const Capacitacion = () => {
                   )}
                 </div>
 
-                {/* ✅ Paginación con el MISMO DISEÑO que documentos.jsx */}
+                {/* Paginación con el MISMO DISEÑO que documentos.jsx */}
                 {lastPage > 1 && (
                   <div className="pagination-wrapper mt-4 d-flex justify-content-center gap-2">
                     <button

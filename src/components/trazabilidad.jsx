@@ -310,7 +310,7 @@ const Trazabilidad = () => {
         <Container fluid>
           <Row className="py-3">
             <Col md={12} className="text-center">
-              <p className="mb-0">© 2025 La Farmacia Homeopática - Registro de trazabilidad.</p>
+              <p className="mb-0">© 2025 La Farmacia Homeopática - Más alternativas, más servicio.</p>
             </Col>
           </Row>
         </Container>

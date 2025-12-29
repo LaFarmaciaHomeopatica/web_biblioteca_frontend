@@ -17,11 +17,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/laboratorios.css';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
-import placeholder from '../assets/placeholder.png'; // ✅ placeholder blanco
+import placeholder from '../assets/placeholder.png';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
 
-const DEBUG_URLS = false; // ponlo en true para ver en consola las URLs calculadas
+const DEBUG_URLS = false;
 
 /** Imagen perezosa: solo carga cuando la card entra en pantalla */
 const LazyLabImage = ({ alt, primary, backup }) => {
@@ -40,7 +40,7 @@ const LazyLabImage = ({ alt, primary, backup }) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setIsVisible(true);
-            observer.unobserve(entry.target); // ya no necesitamos seguir observando
+            observer.unobserve(entry.target);
           }
         });
       },
@@ -64,7 +64,7 @@ const LazyLabImage = ({ alt, primary, backup }) => {
     } else if (backup) {
       setSrc(backup);
     } else {
-      setSrc(placeholder); // ✅ si no hay ninguna, queda blanco
+      setSrc(placeholder); // si no hay ninguna, queda blanco
     }
   }, [isVisible, primary, backup]);
 
@@ -74,7 +74,6 @@ const LazyLabImage = ({ alt, primary, backup }) => {
       setTriedBackup(true);
       setSrc(backup);
     } else {
-      // ✅ Último recurso: placeholder blanco (no logo)
       setSrc(placeholder);
     }
   };
@@ -94,7 +93,7 @@ const LazyLabImage = ({ alt, primary, backup }) => {
           onError={handleError}
         />
       ) : (
-        // ✅ Mientras no es visible o aún no se decidió src, mostramos placeholder blanco
+        // Mientras no es visible o aún no se decidió src, mostramos placeholder blanco
         <img
           src={placeholder}
           alt={alt}
@@ -132,22 +131,15 @@ const Laboratorios = () => {
   const sanitizeAbsUrl = useCallback((u) => {
     if (!u || typeof u !== 'string') return u;
     let out = u.trim();
-    // Corrige /backend/backend/ duplicado al inicio del path
     out = out.replace(/^(https?:\/\/[^/]+)\/(?:backend\/)+/i, '$1/backend/');
-    // Colapsa slashes repetidos (sin tocar https://)
     out = out.replace(/([^:]\/)\/+/g, '$1');
     return out;
   }, []);
 
-  /**
-   * Para cada item, calculamos:
-   *  - primary: lo más estable (preferimos imagen estática /backend/storage/...)
-   *  - backup: la alternativa (proxy ?path=... o viceversa)
-   */
   const buildUrls = useCallback(
     (d) => {
-      const baseApi = (api.defaults?.baseURL || '').replace(/\/+$/, ''); // .../backend/api
-      const baseRoot = baseApi.replace(/\/api$/i, ''); // .../backend
+      const baseApi = (api.defaults?.baseURL || '').replace(/\/+$/, ''); 
+      const baseRoot = baseApi.replace(/\/api$/i, '');
 
       const hasAbs = (s) => typeof s === 'string' && /^https?:\/\//i.test(s);
       const hasRel = (s) => typeof s === 'string' && s.trim() !== '';
@@ -155,7 +147,6 @@ const Laboratorios = () => {
       let primary = null;
       let backup = null;
 
-      // 1) Preferir imagen estática absoluta si viene
       if (hasAbs(d?.imagen_url)) {
         primary = sanitizeAbsUrl(d.imagen_url);
         if (hasRel(d?.imagen_path) || hasRel(d?.imagen)) {
@@ -167,7 +158,7 @@ const Laboratorios = () => {
           backup = sanitizeAbsUrl(d.image_url);
         }
       }
-      // 2) Si no, usar image_url absoluta (proxy) como primary
+
       else if (hasAbs(d?.image_url)) {
         primary = sanitizeAbsUrl(d.image_url);
         if (hasRel(d?.imagen_url)) {
@@ -180,7 +171,7 @@ const Laboratorios = () => {
           );
         }
       }
-      // 3) imagen_url relativa → absoluta (storage)
+      // imagen_url relativa → absoluta (storage)
       else if (hasRel(d?.imagen_url)) {
         const rel = d.imagen_url.trim().replace(/^\/+/, '');
         primary = sanitizeAbsUrl(`${baseRoot}/${rel}`);
@@ -193,7 +184,7 @@ const Laboratorios = () => {
           backup = sanitizeAbsUrl(d.image_url);
         }
       }
-      // 4) Último recurso: proxy por path
+      // Último recurso: proxy por path
       else if (hasRel(d?.imagen_path) || hasRel(d?.imagen)) {
         const rel = (d.imagen_path || d.imagen).trim();
         primary = sanitizeAbsUrl(
@@ -202,7 +193,6 @@ const Laboratorios = () => {
       }
 
       if (DEBUG_URLS) {
-        // eslint-disable-next-line no-console
         console.log(`[LAB ${d?.id} - ${d?.nombre}]`, { primary, backup });
       }
 
@@ -253,7 +243,6 @@ const Laboratorios = () => {
         err?.message ||
         'No se pudieron cargar los laboratorios.';
       setError(msg);
-      // eslint-disable-next-line no-console
       console.error('GET /laboratorios error:', err?.response?.data || err);
     } finally {
       setLoading(false);
@@ -334,7 +323,7 @@ const Laboratorios = () => {
       <Container fluid className="laboratorios-content px-3 px-md-5">
         <h2 className="laboratorios-title text-center my-4">Laboratorios</h2>
 
-        {/* Barra de búsqueda (igual que admin, pero sin botón de crear) */}
+        {/* Barra de búsqueda */}
         <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between my-3 gap-2">
           <InputGroup className="me-2" style={{ maxWidth: 520 }}>
             <InputGroup.Text>
@@ -347,7 +336,6 @@ const Laboratorios = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </InputGroup>
-          {/* En la vista cliente no hay botón de crear */}
         </div>
 
         {loading && (
@@ -373,7 +361,6 @@ const Laboratorios = () => {
         {/* LISTADO DE CARDS */}
         {filtered.length > 0 && (
           onlyOne ? (
-            // Caso 1 laboratorio: card centrada y grande
             <Row className="g-4 justify-content-center">
               <Col xs="auto">
                 <LabCard lab={filtered[0]} onClickLab={handleLaboratorioClick} />

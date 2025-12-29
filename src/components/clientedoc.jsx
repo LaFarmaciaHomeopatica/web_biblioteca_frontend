@@ -16,7 +16,7 @@ import {
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/clientedoc.css';
-import '../assets/consulta.css'; // ⬅️ reutilizamos el mismo layout/ancho que consulta.jsx
+import '../assets/consulta.css'; 
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpeg';
 import { useAuth } from '../context/AuthContext';
@@ -225,7 +225,6 @@ const Clientedoc = () => {
 
   const go = (path) => () => navigate(path);
 
-  // ✅ NUEVO: botón Módulo Médico (cliente)
   const handleGoToModuloMedico = () => navigate('/modulomedico-cliente');
 
   const handleLogout = async () => {
@@ -235,7 +234,7 @@ const Clientedoc = () => {
 
   return (
     <div className="clientedoc-layout">
-      {/* HEADER (igual que cliente) */}
+      {/* HEADER */}
       <Navbar expand="lg" className="clientedoc-header" variant="dark">
         <Container fluid>
           <Navbar.Brand className="d-flex align-items-center">
@@ -252,12 +251,9 @@ const Clientedoc = () => {
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="ms-auto d-flex flex-column flex-lg-row gap-2 mt-3 mt-lg-0">
-              {/* ✅ NUEVO BOTÓN a la izquierda de Vencimiento */}
               <Button onClick={handleGoToModuloMedico}>
                 <i className="bi bi-heart-pulse me-1"></i> Médicos
               </Button>
-
-              {/* ✅ CAMBIO ÚNICO: ruta + texto del botón */}
               <Button onClick={go('/registrosanitariocliente')}>
                 <i className="bi bi-hourglass-split me-1"></i> Registro Sanitario
               </Button>
@@ -285,7 +281,7 @@ const Clientedoc = () => {
         </Container>
       </Navbar>
 
-      {/* CONTENIDO – mismo layout que consulta.jsx */}
+      {/* CONTENIDO */}
       <Container fluid className="consulta-content px-3 px-md-5">
         <Card className="consulta-card mt-4">
           <Card.Body>
@@ -323,7 +319,7 @@ const Clientedoc = () => {
                   <div className="text-center mb-3">Cargando documentos...</div>
                 )}
 
-                {/* Lista de tarjetas con el MISMO diseño que consulta.jsx */}
+                {/* Lista de tarjetas */}
                 <div className="product-list">
                   {documentos.length > 0 ? (
                     documentos.map((doc) => (
