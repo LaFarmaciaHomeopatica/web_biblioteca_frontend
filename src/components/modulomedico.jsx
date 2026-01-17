@@ -38,7 +38,7 @@ const ModuloMedico = () => {
     }
   };
 
-  // Helpers para mostrar tarifa en %
+  // Helpers tarifa (backend actual requiere NUMERO)
   const formatearPrecio = (valor) => {
     if (valor === null || valor === undefined || valor === "") return "";
     const numero = Number(String(valor).replace(/[^0-9.-]/g, ""));
@@ -53,7 +53,42 @@ const ModuloMedico = () => {
     return f ? `${f} %` : "";
   };
 
-  // Datos de la tabla provenientes del backend
+  /**
+   * Parsea lo que el usuario escriba en "Tarifa".
+   * - Si hay dígitos: devuelve número (ej "15% + IVA" => 15) y nota si hay texto adicional.
+   * - Si NO hay dígitos: devuelve null y guarda el texto como nota para observaciones.
+   */
+  const parseTarifaInput = (raw) => {
+    const input = String(raw ?? "").trim();
+    if (!input) return { number: null, note: null };
+
+    const digitsOnly = input.replace(/[^\d]/g, "");
+    if (digitsOnly) {
+      const num = Number(digitsOnly);
+      const normalized = input.toLowerCase();
+
+      // Si trae algo más que "15" o "15%" (por ejemplo "15% + IVA"), guardamos la nota
+      const simpleLike = normalized === `${num}` || normalized === `${num}%`;
+      const note = simpleLike ? null : `Tarifa (texto): ${input}`;
+      return { number: num, note };
+    }
+
+    // Solo texto sin dígitos
+    return { number: null, note: `Tarifa (texto): ${input}` };
+  };
+
+  const mergeObservaciones = (observacionesActuales, note) => {
+    const base = String(observacionesActuales ?? "").trim();
+    if (!note) return base || null;
+
+    // Evitar duplicar exactamente la misma nota
+    if (base.toLowerCase().includes(note.toLowerCase())) return base || null;
+
+    const merged = base ? `${base}\n${note}` : note;
+    return merged.trim() || null;
+  };
+
+  // Datos de la tabla
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState("");
@@ -73,7 +108,7 @@ const ModuloMedico = () => {
 
   const closeActionModal = () => setShowActionModal(false);
 
-  // Confirmación (reemplaza window.confirm)
+  // Confirmación
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmTitle, setConfirmTitle] = useState("Confirmar Eliminación");
   const [confirmMessage, setConfirmMessage] = useState("");
@@ -160,12 +195,13 @@ const ModuloMedico = () => {
         includes(row.nombre) ||
         includes(row.visitador) ||
         includes(row.observaciones) ||
-        includes(row.cartera)
+        includes(row.cartera) ||
+        includes(row.tarifa)
       );
     });
   }, [data, normalizedSearch]);
 
-  // Paginación (FRONT) 100 por página
+  // Paginación
   const [page, setPage] = useState(1);
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE)),
@@ -185,7 +221,7 @@ const ModuloMedico = () => {
     setPage(1);
   }, [normalizedSearch]);
 
-  // Selección (eliminar individual y en grupo)
+  // Selección
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const selectedCount = selectedIds.size;
 
@@ -222,7 +258,7 @@ const ModuloMedico = () => {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  // Estilo reutilizable para textarea "Observaciones"
+  // Estilo textarea observaciones
   const observacionesTextareaStyle = {
     resize: "vertical",
     overflowY: "auto",
@@ -230,7 +266,7 @@ const ModuloMedico = () => {
     maxHeight: "45vh",
   };
 
-  // Estado para el modal de creación
+  // Modal crear
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRecord, setNewRecord] = useState({
     identificacion: "",
@@ -257,12 +293,15 @@ const ModuloMedico = () => {
   const [editError, setEditError] = useState("");
   const [updating, setUpdating] = useState(false);
 
+  // Para poder conservar la tarifa numérica previa si el usuario escribe solo texto en edición
+  const [editTarifaPrevNumber, setEditTarifaPrevNumber] = useState(null);
+
   // Import/Export
   const fileInputRef = useRef(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  // Cargar registros desde el backend
+  // Fetch
   const fetchMedicos = useCallback(async () => {
     try {
       setLoading(true);
@@ -322,26 +361,30 @@ const ModuloMedico = () => {
   };
 
   const handleSaveNewRecord = async () => {
-    if (
-      !newRecord.identificacion.trim() ||
-      !newRecord.nombre.trim() ||
-      !newRecord.tarifa.trim()
-    ) {
-      setCreateError("Identificación, nombre y tarifa son campos obligatorios.");
+    if (!newRecord.identificacion.trim() || !newRecord.nombre.trim()) {
+      setCreateError("Identificación y nombre son campos obligatorios.");
       return;
     }
 
-    const tarifaLimpia = newRecord.tarifa.replace(/[^\d]/g, "");
-    if (!tarifaLimpia) {
-      setCreateError("La tarifa debe ser un porcentaje válido.");
+    // Backend actual: tarifa requerida numérica. Permitimos texto, pero debe traer al menos un número en CREAR.
+    const parsed = parseTarifaInput(newRecord.tarifa);
+    if (parsed.number === null) {
+      setCreateError(
+        'Por ahora, el sistema solo permite guardar tarifa con número (ej: "15%" o "15"). Si necesitas solo texto (ej: "Según convenio"), se podrá cuando actualicemos el backend/BD.'
+      );
       return;
     }
+
+    const observacionesFinal = mergeObservaciones(
+      newRecord.observaciones,
+      parsed.note
+    );
 
     const payload = {
       identificacion: newRecord.identificacion.trim(),
       nombre: newRecord.nombre.trim(),
-      tarifa: Number(tarifaLimpia),
-      observaciones: newRecord.observaciones.trim() || null,
+      tarifa: parsed.number, // <-- SIEMPRE NUMERO para evitar 422
+      observaciones: observacionesFinal,
       visitador: newRecord.visitador.trim() || null,
       cartera: newRecord.cartera || null,
     };
@@ -357,7 +400,9 @@ const ModuloMedico = () => {
 
       openActionModal(
         "Registro creado",
-        `Se creó el registro médico: ${payload.identificacion} - ${payload.nombre}`
+        parsed.note
+          ? `Se creó el registro. Nota: el texto adicional de tarifa se guardó en Observaciones.\n${payload.identificacion} - ${payload.nombre}`
+          : `Se creó el registro médico: ${payload.identificacion} - ${payload.nombre}`
       );
 
       await registrarTrazabilidad(
@@ -387,14 +432,24 @@ const ModuloMedico = () => {
   };
 
   // =========================
-  // Editar (individual)
+  // Editar
   // =========================
   const openEditModal = (row) => {
     setEditError("");
     setEditId(row.id);
+
+    // Guardamos la tarifa numérica previa para poder conservarla si el usuario escribe solo texto
+    const prevNum =
+      row.tarifa === null || row.tarifa === undefined || row.tarifa === ""
+        ? null
+        : Number(String(row.tarifa).replace(/[^\d]/g, "")) || null;
+
+    setEditTarifaPrevNumber(prevNum);
+
     setEditRecord({
       identificacion: row.identificacion || "",
       nombre: row.nombre || "",
+      // Mostramos como % si es numérico, pero permitimos editar libre
       tarifa:
         row.tarifa === null || row.tarifa === undefined || row.tarifa === ""
           ? ""
@@ -403,6 +458,7 @@ const ModuloMedico = () => {
       visitador: row.visitador || "",
       cartera: row.cartera ?? "",
     });
+
     setShowEditModal(true);
   };
 
@@ -418,26 +474,38 @@ const ModuloMedico = () => {
   const handleUpdateRecord = async () => {
     if (!editId) return;
 
-    if (
-      !editRecord.identificacion.trim() ||
-      !editRecord.nombre.trim() ||
-      String(editRecord.tarifa).trim() === ""
-    ) {
-      setEditError("Identificación, nombre y tarifa son obligatorios.");
+    if (!editRecord.identificacion.trim() || !editRecord.nombre.trim()) {
+      setEditError("Identificación y nombre son obligatorios.");
       return;
     }
 
-    const tarifaLimpia = String(editRecord.tarifa).replace(/[^\d]/g, "");
-    if (!tarifaLimpia) {
-      setEditError("La tarifa debe ser un porcentaje válido.");
-      return;
+    // Backend actual: requiere número. En EDITAR permitimos solo texto, pero entonces conservamos el número previo.
+    const parsed = parseTarifaInput(editRecord.tarifa);
+
+    let tarifaNumeroFinal = parsed.number;
+
+    // Si el usuario puso solo texto sin dígitos:
+    if (tarifaNumeroFinal === null) {
+      if (editTarifaPrevNumber === null) {
+        setEditError(
+          'Por ahora, el sistema requiere una tarifa numérica. Escribe un número (ej: "15%" o "15").'
+        );
+        return;
+      }
+      // Conserva la tarifa previa y guarda el texto en observaciones
+      tarifaNumeroFinal = editTarifaPrevNumber;
     }
+
+    const observacionesFinal = mergeObservaciones(
+      editRecord.observaciones,
+      parsed.note
+    );
 
     const payload = {
       identificacion: editRecord.identificacion.trim(),
       nombre: editRecord.nombre.trim(),
-      tarifa: Number(tarifaLimpia),
-      observaciones: editRecord.observaciones.trim() || null,
+      tarifa: tarifaNumeroFinal, // <-- SIEMPRE NUMERO para evitar 422
+      observaciones: observacionesFinal,
       visitador: editRecord.visitador.trim() || null,
       cartera: editRecord.cartera || null,
     };
@@ -445,13 +513,16 @@ const ModuloMedico = () => {
     try {
       setUpdating(true);
       setEditError("");
+
       await api.put(`/medicos/${editId}`, payload);
       setShowEditModal(false);
       await fetchMedicos();
 
       openActionModal(
         "Cambios guardados",
-        `Se actualizó el registro: ${payload.identificacion} - ${payload.nombre}`
+        parsed.note
+          ? `Se actualizó el registro. Nota: el texto de tarifa se guardó en Observaciones.\n${payload.identificacion} - ${payload.nombre}`
+          : `Se actualizó el registro: ${payload.identificacion} - ${payload.nombre}`
       );
 
       await registrarTrazabilidad(
@@ -460,11 +531,14 @@ const ModuloMedico = () => {
       );
     } catch (error) {
       console.error("Error al editar médico:", error);
+
       if (error.response?.data?.errors) {
         const mensajes = Object.values(error.response.data.errors)
           .flat()
           .join(" ");
         setEditError(mensajes);
+      } else if (error.response?.data?.message) {
+        setEditError(error.response.data.message);
       } else {
         setEditError("No se pudo actualizar el registro.");
       }
@@ -474,7 +548,7 @@ const ModuloMedico = () => {
   };
 
   // =========================
-  // Eliminar (individual y masivo)
+  // Eliminar
   // =========================
   const deleteOne = async (id) => {
     const row = data.find((x) => x.id === id);
@@ -585,7 +659,6 @@ const ModuloMedico = () => {
       const formData = new FormData();
       formData.append("file", file);
 
-      // ✅ NO forzar Content-Type: axios lo pone bien con el boundary.
       const res = await api.post("/medicos/import-excel", formData, {
         timeout: 180000,
         withCredentials: true,
@@ -678,9 +751,7 @@ const ModuloMedico = () => {
     }
   };
 
-  // =========================
-  // Controles de paginación
-  // =========================
+  // Paginación
   const goFirst = () => setPage(1);
   const goPrev = () => setPage((p) => Math.max(1, p - 1));
   const goNext = () => setPage((p) => Math.min(totalPages, p + 1));
@@ -865,7 +936,7 @@ const ModuloMedico = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por identificación, nombre, visitador, observaciones o ejemplo..."
+              placeholder="Buscar por identificación, nombre, visitador, observaciones, cartera o tarifa..."
               disabled={loading}
             />
             <div className="mt-1" style={{ fontSize: "0.85rem", opacity: 0.9 }}>
@@ -883,7 +954,9 @@ const ModuloMedico = () => {
           </div>
 
           {loading && <p className="text-center mb-2">Cargando registros...</p>}
-          {fetchError && <p className="text-center text-danger mb-2">{fetchError}</p>}
+          {fetchError && (
+            <p className="text-center text-danger mb-2">{fetchError}</p>
+          )}
 
           {/* TABLA */}
           <div style={{ width: "100%", overflowX: "auto" }}>
@@ -907,7 +980,9 @@ const ModuloMedico = () => {
                         checked={isAllSelected}
                         onChange={toggleSelectAll}
                         disabled={allIds.length === 0}
-                        title={isAllSelected ? "Desmarcar todo" : "Seleccionar todo"}
+                        title={
+                          isAllSelected ? "Desmarcar todo" : "Seleccionar todo"
+                        }
                       />
                     </th>
                   )}
@@ -919,7 +994,9 @@ const ModuloMedico = () => {
                   {visibleCols.visitador && <th>Visitador</th>}
                   {visibleCols.cartera && <th>Cartera</th>}
 
-                  {visibleCols.acciones && <th style={{ width: "190px" }}>Acciones</th>}
+                  {visibleCols.acciones && (
+                    <th style={{ width: "190px" }}>Acciones</th>
+                  )}
                 </tr>
               </thead>
 
@@ -946,9 +1023,13 @@ const ModuloMedico = () => {
                         </td>
                       )}
 
-                      {visibleCols.identificacion && <td>{row.identificacion}</td>}
+                      {visibleCols.identificacion && (
+                        <td>{row.identificacion}</td>
+                      )}
                       {visibleCols.nombre && <td>{row.nombre}</td>}
-                      {visibleCols.tarifa && <td>{mostrarPrecio(row.tarifa)}</td>}
+                      {visibleCols.tarifa && (
+                        <td>{mostrarPrecio(row.tarifa)}</td>
+                      )}
                       {visibleCols.observaciones && <td>{row.observaciones}</td>}
                       {visibleCols.visitador && <td>{row.visitador}</td>}
                       {visibleCols.cartera && <td>{row.cartera}</td>}
@@ -984,7 +1065,9 @@ const ModuloMedico = () => {
                   !loading && (
                     <tr>
                       <td
-                        colSpan={Object.values(visibleCols).filter(Boolean).length || 1}
+                        colSpan={
+                          Object.values(visibleCols).filter(Boolean).length || 1
+                        }
                         className="text-center"
                       >
                         No hay datos cargados.
@@ -1069,27 +1152,42 @@ const ModuloMedico = () => {
       </footer>
 
       {/* MODAL CONFIRMAR */}
-      <Modal show={showConfirmModal} onHide={closeConfirmModal} centered backdrop="static">
+      <Modal
+        show={showConfirmModal}
+        onHide={closeConfirmModal}
+        centered
+        backdrop="static"
+      >
         <Modal.Header closeButton>
           <Modal.Title>{confirmTitle}</Modal.Title>
         </Modal.Header>
         <Modal.Body>{confirmMessage}</Modal.Body>
         <Modal.Footer>
-          <Button variant="info" onClick={closeConfirmModal} disabled={confirmLoading}>
+          <Button
+            variant="info"
+            onClick={closeConfirmModal}
+            disabled={confirmLoading}
+          >
             Cancelar
           </Button>
-          <Button variant="info" onClick={handleConfirm} disabled={confirmLoading}>
+          <Button
+            variant="info"
+            onClick={handleConfirm}
+            disabled={confirmLoading}
+          >
             {confirmLoading ? "Eliminando..." : "Eliminar"}
           </Button>
         </Modal.Footer>
       </Modal>
 
-      {/* MODAL ACCIÓN OK/ERROR */}
+      {/* MODAL ACCIÓN */}
       <Modal show={showActionModal} onHide={closeActionModal} centered>
         <Modal.Header closeButton>
           <Modal.Title>{actionModalTitle}</Modal.Title>
         </Modal.Header>
-        <Modal.Body style={{ whiteSpace: "pre-wrap" }}>{actionModalMessage}</Modal.Body>
+        <Modal.Body style={{ whiteSpace: "pre-wrap" }}>
+          {actionModalMessage}
+        </Modal.Body>
         <Modal.Footer>
           <Button variant="info" onClick={closeActionModal}>
             Perfecto
@@ -1098,7 +1196,12 @@ const ModuloMedico = () => {
       </Modal>
 
       {/* MODAL NUEVO REGISTRO */}
-      <Modal show={showCreateModal} onHide={closeCreateModal} centered backdrop="static">
+      <Modal
+        show={showCreateModal}
+        onHide={closeCreateModal}
+        centered
+        backdrop="static"
+      >
         <Modal.Header closeButton>
           <Modal.Title>Nuevo registro médico</Modal.Title>
         </Modal.Header>
@@ -1127,14 +1230,17 @@ const ModuloMedico = () => {
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Tarifa (%)</Form.Label>
+              <Form.Label>Tarifa</Form.Label>
               <Form.Control
                 type="text"
                 name="tarifa"
                 value={newRecord.tarifa}
                 onChange={handleNewRecordChange}
-                placeholder="Ej: 15%"
+                placeholder='Ej: 15%  |  "15% + IVA"  |  (solo texto no guarda aún en tarifa)'
               />
+              <div className="mt-1" style={{ fontSize: "0.85rem", opacity: 0.9 }}>
+                Nota: por ahora el sistema guarda tarifa como número; si escribes texto extra se guardará en Observaciones.
+              </div>
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -1183,14 +1289,23 @@ const ModuloMedico = () => {
           <Button variant="info" onClick={closeCreateModal} disabled={saving}>
             Cancelar
           </Button>
-          <Button variant="info" onClick={handleSaveNewRecord} disabled={saving}>
+          <Button
+            variant="info"
+            onClick={handleSaveNewRecord}
+            disabled={saving}
+          >
             {saving ? "Guardando..." : "Guardar registro"}
           </Button>
         </Modal.Footer>
       </Modal>
 
       {/* MODAL EDITAR */}
-      <Modal show={showEditModal} onHide={closeEditModal} centered backdrop="static">
+      <Modal
+        show={showEditModal}
+        onHide={closeEditModal}
+        centered
+        backdrop="static"
+      >
         <Modal.Header closeButton>
           <Modal.Title>Editar registro médico</Modal.Title>
         </Modal.Header>
@@ -1217,14 +1332,17 @@ const ModuloMedico = () => {
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Tarifa (%)</Form.Label>
+              <Form.Label>Tarifa</Form.Label>
               <Form.Control
                 type="text"
                 name="tarifa"
                 value={editRecord.tarifa}
                 onChange={handleEditRecordChange}
-                placeholder="Ej: 15%"
+                placeholder='Ej: 15%  |  "15% + IVA"  |  "Según convenio" (se guarda en Observaciones)'
               />
+              <div className="mt-1" style={{ fontSize: "0.85rem", opacity: 0.9 }}>
+                Si escribes solo texto (sin número), se conserva la tarifa numérica anterior y el texto queda en Observaciones.
+              </div>
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -1272,7 +1390,11 @@ const ModuloMedico = () => {
           <Button variant="info" onClick={closeEditModal} disabled={updating}>
             Cancelar
           </Button>
-          <Button variant="info" onClick={handleUpdateRecord} disabled={updating}>
+          <Button
+            variant="info"
+            onClick={handleUpdateRecord}
+            disabled={updating}
+          >
             {updating ? "Actualizando..." : "Guardar cambios"}
           </Button>
         </Modal.Footer>
